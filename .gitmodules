@@ -1,0 +1,3 @@
+[submodule "zecs"]
+	path = zecs
+	url = git@github.com:smile4u/zecs.git
