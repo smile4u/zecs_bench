@@ -14,8 +14,9 @@ file(GLOB_RECURSE BENCH_SOURCES CONFIGURE_DEPENDS
 
 source_group("src" FILES ${BENCH_SOURCES})
 
-# Интерфейсные библиотеки entt и nb (nanobench)
+# Интерфейсные библиотеки entt, nb (nanobench) и picobench
 add_subdirectory(ext)
+add_subdirectory(zecs)
 
 add_executable(${PROJECT_NAME} ${BENCH_SOURCES})
-target_link_libraries(${PROJECT_NAME} PRIVATE entt nb)
+target_link_libraries(${PROJECT_NAME} PRIVATE nb picobench entt zecs)
