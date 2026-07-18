@@ -1,0 +1,9 @@
+cmake_minimum_required(VERSION 3.25)
+
+add_library(nb INTERFACE)
+target_sources(nb INTERFACE nanobench/nanobench.h)
+target_include_directories(nb INTERFACE ${CMAKE_CURRENT_LIST_DIR})
+
+add_library(entt INTERFACE)
+target_sources(entt INTERFACE entt/entt.hpp)
+target_include_directories(entt INTERFACE ${CMAKE_CURRENT_LIST_DIR})
