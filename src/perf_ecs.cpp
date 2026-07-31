@@ -4,12 +4,52 @@
 
 #include "perf_traits.h"
 
+namespace
+{
+template<typename Comp>
+uint64_t comp_value_sum(entt::registry& reg)
+{
+    uint64_t sum = 0;
+    for (entt::entity e : reg.view<Comp>())
+        sum += uint64_t(reg.get<Comp>(e).value);
+    return sum;
+}
+
+template<typename Comp>
+uint64_t comp_value_sum(zecs::World& world)
+{
+    uint64_t sum = 0;
+    for (zecs::Entity e : world.view_comp_group<Comp>())
+        sum += uint64_t(world.comp_get<Comp>(e)->value);
+    return sum;
+}
+
+// Наборы компонентов, матчующие пять view из run_views(); 0 — терминатор.
+constexpr size_t VIEW_MATCH_COMPS[][9] = {
+    { 1, 5, 0 },
+    { 7, 11, 12, 0 },
+    { 22, 33, 44, 45, 0 },
+    { 3, 17, 23, 33, 43, 0 },
+    { 4, 15, 24, 25, 34, 35, 44, 45, 0 },
+};
+} // namespace
+
 void TestWorld::fill(size_t entities_count, size_t coms_count)
 {
     for(size_t i = 0; i < entities_count; ++i)
     {
         TestEntityIndex index = entity_add();
         entity_fill(index, i % coms_count);
+
+        // Каждая пятая энтити дополнительно получает набор компонентов одного
+        // из view, иначе при coms_count < 45 большая часть view пуста и замер
+        // превращается в стоимость построения пустого view.
+        if (i % 5 == 0)
+        {
+            const size_t* view_comps = VIEW_MATCH_COMPS[(i / 5) % 5];
+            for (size_t k = 0; view_comps[k] != 0; ++k)
+                comp_add(index, view_comps[k]);
+        }
     }
 }
 
@@ -56,6 +96,12 @@ TestCompBase* TestWorldEntt::comp_get(TestEntityIndex index, size_t comp_index)
     return dispatch::entt_get_table[comp_index](reg, entity);
 }
 
+void TestWorldEntt::comp_add(TestEntityIndex index, size_t comp_index)
+{
+    assert(comp_index >= 1 && comp_index <= TEST_COMPS_MAX);
+    dispatch::entt_add_table[comp_index](reg, entities[index]);
+}
+
 void TestWorldZecs::entity_fill(TestEntityIndex index, size_t coms_count)
 {
     assert(coms_count <= TEST_COMPS_MAX);
@@ -69,6 +115,12 @@ TestCompBase* TestWorldZecs::comp_get(TestEntityIndex index, size_t comp_index)
         return nullptr;
     assert(comp_index <= TEST_COMPS_MAX);
     return dispatch::zecs_get_table[comp_index](world, entity);
+}
+
+void TestWorldZecs::comp_add(TestEntityIndex index, size_t comp_index)
+{
+    assert(comp_index >= 1 && comp_index <= TEST_COMPS_MAX);
+    dispatch::zecs_add_table[comp_index](world, entities[index]);
 }
 
 void TestWorldEntt::run_views()
@@ -106,33 +158,70 @@ void TestWorldEntt::run_views()
 
 void TestWorldZecs::run_views()
 {
-    for (zecs::Entity e : world.view_comp_group<TestComp<1>, TestComp<5>>())
+    // world.comp_get<T>(e)/world.comp_patch<T>(e) each independently re-resolve
+    // the component pool from World (cuidIndex + comp_pools lookup). The view
+    // already resolved and holds that same pool pointer, so view.comp_get<T>(e)/
+    // view.comp_patch<T>(e) reuse it instead of asking World again.
     {
-        world.comp_get<TestComp<1>>(e)->value += 11;
-        world.comp_patch<TestComp<1>>(e);
+        auto view = world.view_comp_group<TestComp<1>, TestComp<5>>();
+        for (zecs::Entity e : view)
+        {
+            view.comp_get<TestComp<1>>(e)->value += 11;
+            view.comp_patch<TestComp<1>>(e);
+        }
     }
 
-    for (zecs::Entity e : world.view_comp_group<TestComp<7>, TestComp<11>, TestComp<12>>())
     {
-        world.comp_get<TestComp<7>>(e)->value += 12;
-        world.comp_patch<TestComp<7>>(e);
+        auto view = world.view_comp_group<TestComp<7>, TestComp<11>, TestComp<12>>();
+        for (zecs::Entity e : view)
+        {
+            view.comp_get<TestComp<7>>(e)->value += 12;
+            view.comp_patch<TestComp<7>>(e);
+        }
     }
 
-    for (zecs::Entity e : world.view_comp_group<TestComp<22>, TestComp<33>, TestComp<44>, TestComp<45>>())
     {
-        world.comp_get<TestComp<22>>(e)->value += 13;
-        world.comp_patch<TestComp<22>>(e);
+        auto view = world.view_comp_group<TestComp<22>, TestComp<33>, TestComp<44>, TestComp<45>>();
+        for (zecs::Entity e : view)
+        {
+            view.comp_get<TestComp<22>>(e)->value += 13;
+            view.comp_patch<TestComp<22>>(e);
+        }
     }
 
-    for (zecs::Entity e : world.view_comp_group<TestComp<3>, TestComp<17>, TestComp<23>, TestComp<33>, TestComp<43>>())
     {
-        world.comp_get<TestComp<3>>(e)->value += 14;
-        world.comp_patch<TestComp<3>>(e);
+        auto view = world.view_comp_group<TestComp<3>, TestComp<17>, TestComp<23>, TestComp<33>, TestComp<43>>();
+        for (zecs::Entity e : view)
+        {
+            view.comp_get<TestComp<3>>(e)->value += 14;
+            view.comp_patch<TestComp<3>>(e);
+        }
     }
 
-    for (zecs::Entity e : world.view_comp_group<TestComp<4>, TestComp<15>, TestComp<24>, TestComp<25>, TestComp<34>, TestComp<35>, TestComp<44>, TestComp<45>>())
     {
-        world.comp_get<TestComp<4>>(e)->value += 15;
-        world.comp_patch<TestComp<4>>(e);
+        auto view = world.view_comp_group<TestComp<4>, TestComp<15>, TestComp<24>, TestComp<25>, TestComp<34>, TestComp<35>, TestComp<44>, TestComp<45>>();
+        for (zecs::Entity e : view)
+        {
+            view.comp_get<TestComp<4>>(e)->value += 15;
+            view.comp_patch<TestComp<4>>(e);
+        }
     }
+}
+
+uint64_t TestWorldEntt::mutation_sum()
+{
+    return comp_value_sum<TestComp<1>>(reg)
+        + comp_value_sum<TestComp<7>>(reg)
+        + comp_value_sum<TestComp<22>>(reg)
+        + comp_value_sum<TestComp<3>>(reg)
+        + comp_value_sum<TestComp<4>>(reg);
+}
+
+uint64_t TestWorldZecs::mutation_sum()
+{
+    return comp_value_sum<TestComp<1>>(world)
+        + comp_value_sum<TestComp<7>>(world)
+        + comp_value_sum<TestComp<22>>(world)
+        + comp_value_sum<TestComp<3>>(world)
+        + comp_value_sum<TestComp<4>>(world);
 }

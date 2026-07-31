@@ -97,6 +97,20 @@ TestCompBase* zecs_comp_get(zecs::World& world, zecs::Entity entity)
     return world.comp_get<TestComp<I>>(entity);
 }
 
+// Adds the entity's TestComp<I> component if it doesn't have one yet.
+template<size_t I>
+void entt_comp_add(entt::registry& reg, entt::entity entity)
+{
+    (void)reg.get_or_emplace<TestComp<I>>(entity);
+}
+
+// Adds the entity's TestComp<I> component if it doesn't have one yet.
+template<size_t I>
+void zecs_comp_add(zecs::World& world, zecs::Entity entity)
+{
+    world.comp_get_or_add<TestComp<I>>(entity);
+}
+
 // ---------------------------------------------------------------------------
 // Dispatch tables: entry [i] points to the worker instantiation for case i.
 // Built at compile time by expanding index_sequence<0..TEST_COMPS_MAX> into
@@ -105,8 +119,10 @@ TestCompBase* zecs_comp_get(zecs::World& world, zecs::Entity entity)
 
 using EnttFillFn = void(entt::registry&, entt::entity);
 using EnttGetFn = TestCompBase*(entt::registry&, entt::entity);
+using EnttAddFn = void(entt::registry&, entt::entity);
 using ZecsFillFn = void(zecs::World&, zecs::Entity);
 using ZecsGetFn = TestCompBase*(zecs::World&, zecs::Entity);
+using ZecsAddFn = void(zecs::World&, zecs::Entity);
 
 constexpr auto entt_fill_table = []<size_t... Is>(std::index_sequence<Is...>)
 {
@@ -126,5 +142,15 @@ constexpr auto zecs_fill_table = []<size_t... Is>(std::index_sequence<Is...>)
 constexpr auto zecs_get_table = []<size_t... Is>(std::index_sequence<Is...>)
 {
     return std::array<ZecsGetFn*, sizeof...(Is)>{ &zecs_comp_get<Is>... };
+}(std::make_index_sequence<TEST_COMPS_MAX + 1>{});
+
+constexpr auto entt_add_table = []<size_t... Is>(std::index_sequence<Is...>)
+{
+    return std::array<EnttAddFn*, sizeof...(Is)>{ &entt_comp_add<Is>... };
+}(std::make_index_sequence<TEST_COMPS_MAX + 1>{});
+
+constexpr auto zecs_add_table = []<size_t... Is>(std::index_sequence<Is...>)
+{
+    return std::array<ZecsAddFn*, sizeof...(Is)>{ &zecs_comp_add<Is>... };
 }(std::make_index_sequence<TEST_COMPS_MAX + 1>{});
 } // namespace dispatch
