@@ -128,25 +128,25 @@ void TestWorldEntt::run_views()
     for (entt::entity e : reg.view<TestComp<1>, TestComp<5>>())
     {
         reg.get<TestComp<1>>(e).value += 11;
-        reg.patch<TestComp<1>>(e);
+        //reg.patch<TestComp<1>>(e);
     }
 
     for (entt::entity e : reg.view<TestComp<7>, TestComp<11>, TestComp<12>>())
     {
         reg.get<TestComp<7>>(e).value += 12;
-        reg.patch<TestComp<7>>(e);
+        //reg.patch<TestComp<7>>(e);
     }
 
     for (entt::entity e : reg.view<TestComp<22>, TestComp<33>, TestComp<44>, TestComp<45>>())
     {
         reg.get<TestComp<22>>(e).value += 13;
-        reg.patch<TestComp<22>>(e);
+        //reg.patch<TestComp<22>>(e);
     }
 
     for (entt::entity e : reg.view<TestComp<3>, TestComp<17>, TestComp<23>, TestComp<33>, TestComp<43>>())
     {
         reg.get<TestComp<3>>(e).value += 14;
-        reg.patch<TestComp<3>>(e);
+        //reg.patch<TestComp<3>>(e);
     }
 
     for (entt::entity e : reg.view<TestComp<4>, TestComp<15>, TestComp<24>, TestComp<25>, TestComp<34>, TestComp<35>, TestComp<44>, TestComp<45>>())
@@ -158,16 +158,16 @@ void TestWorldEntt::run_views()
 
 void TestWorldZecs::run_views()
 {
-    // world.comp_get<T>(e)/world.comp_patch<T>(e) each independently re-resolve
-    // the component pool from World (cuidIndex + comp_pools lookup). The view
-    // already resolved and holds that same pool pointer, so view.comp_get<T>(e)/
-    // view.comp_patch<T>(e) reuse it instead of asking World again.
+    // world.comp_get<T>(e) re-resolves the component pool from World
+    // (cuidIndex + comp_pools lookup) on every call; the view already holds
+    // the pool's lookup arrays, so view.comp_get<T>(e) skips that.
+    // Views are read-only; patching goes through world.comp_patch<T>(e).
     {
         auto view = world.view_comp_group<TestComp<1>, TestComp<5>>();
         for (zecs::Entity e : view)
         {
-            view.comp_get<TestComp<1>>(e)->value += 11;
-            view.comp_patch<TestComp<1>>(e);
+            world.comp_get<TestComp<1>>(e)->value += 11;
+            //world.comp_patch<TestComp<1>>(e);
         }
     }
 
@@ -175,8 +175,8 @@ void TestWorldZecs::run_views()
         auto view = world.view_comp_group<TestComp<7>, TestComp<11>, TestComp<12>>();
         for (zecs::Entity e : view)
         {
-            view.comp_get<TestComp<7>>(e)->value += 12;
-            view.comp_patch<TestComp<7>>(e);
+            world.comp_get<TestComp<7>>(e)->value += 12;
+            //world.comp_patch<TestComp<7>>(e);
         }
     }
 
@@ -184,8 +184,8 @@ void TestWorldZecs::run_views()
         auto view = world.view_comp_group<TestComp<22>, TestComp<33>, TestComp<44>, TestComp<45>>();
         for (zecs::Entity e : view)
         {
-            view.comp_get<TestComp<22>>(e)->value += 13;
-            view.comp_patch<TestComp<22>>(e);
+            world.comp_get<TestComp<22>>(e)->value += 13;
+            //world.comp_patch<TestComp<22>>(e);
         }
     }
 
@@ -193,8 +193,8 @@ void TestWorldZecs::run_views()
         auto view = world.view_comp_group<TestComp<3>, TestComp<17>, TestComp<23>, TestComp<33>, TestComp<43>>();
         for (zecs::Entity e : view)
         {
-            view.comp_get<TestComp<3>>(e)->value += 14;
-            view.comp_patch<TestComp<3>>(e);
+            world.comp_get<TestComp<3>>(e)->value += 14;
+            //world.comp_patch<TestComp<3>>(e);
         }
     }
 
@@ -202,8 +202,8 @@ void TestWorldZecs::run_views()
         auto view = world.view_comp_group<TestComp<4>, TestComp<15>, TestComp<24>, TestComp<25>, TestComp<34>, TestComp<35>, TestComp<44>, TestComp<45>>();
         for (zecs::Entity e : view)
         {
-            view.comp_get<TestComp<4>>(e)->value += 15;
-            view.comp_patch<TestComp<4>>(e);
+            world.comp_get<TestComp<4>>(e)->value += 15;
+            //world.comp_patch<TestComp<4>>(e);
         }
     }
 }
