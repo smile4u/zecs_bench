@@ -21,6 +21,11 @@ add_subdirectory(zecs)
 add_executable(${PROJECT_NAME} ${BENCH_SOURCES})
 target_link_libraries(${PROJECT_NAME} PRIVATE nb picobench entt zecs)
 
+# perf_ecs.cpp (много шаблонов entt/zecs) превышает лимит секций COFF-объектника
+if(MSVC)
+    target_compile_options(${PROJECT_NAME} PRIVATE /bigobj)
+endif()
+
 # Генерация ассемблерных листингов (.s) рядом с .o — для сравнения кода,
 # который компилятор генерит для zecs и entt, без ручного objdump.
 option(ZECS_BENCH_GENERATE_ASM "Emit assembly listings (.s) next to object files" OFF)
