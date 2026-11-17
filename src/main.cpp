@@ -11,8 +11,9 @@ namespace
 {
 // picobench принимает только свободные функции (без захвата), поэтому
 // мир передаётся через user_data бенчмарка.
-template<typename WorldT>
-void bench_views(picobench::state& s)
+// Run — какой из сценариев TestWorld замеряем (run_views, run_comps, ...).
+template<typename WorldT, void (TestWorld::*Run)()>
+void bench_run(picobench::state& s)
 {
     auto& world = *reinterpret_cast<WorldT*>(s.benchmark_user_data());
 
@@ -22,7 +23,7 @@ void bench_views(picobench::state& s)
     const uint64_t before = world.mutation_sum();
     for (auto _ : s)
     {
-        world.run_views();
+        (world.*Run)();
     }
     s.set_result(world.mutation_sum() - before);
 }
@@ -30,8 +31,8 @@ void bench_views(picobench::state& s)
 void print_table_header()
 {
     std::printf("\n");
-    std::printf("| config                  |     entt ns/op |     zecs ns/op | relative\n");
-    std::printf("|--------------------------|---------------:|---------------:|--------:\n");
+    std::printf("| config                       |     entt ns/op |     zecs ns/op | relative\n");
+    std::printf("|------------------------------|---------------:|---------------:|--------:\n");
     std::fflush(stdout);
 }
 
@@ -46,7 +47,7 @@ void print_table_row(const picobench::report::suite& suite)
 
     const double entt_ns = double(entt->data[0].total_time_ns) / entt->data[0].dimension;
     const double zecs_ns = double(zecs->data[0].total_time_ns) / zecs->data[0].dimension;
-    std::printf("| %-24s | %14.0f | %14.0f | %7.1f%%\n",
+    std::printf("| %-28s | %14.0f | %14.0f | %7.1f%%\n",
         suite.name, entt_ns, zecs_ns, zecs_ns / entt_ns * 100.0);
     std::fflush(stdout);
 }
@@ -58,17 +59,29 @@ int main()
     const size_t entity_counts[] = { 10000, 50000, 200000 };
     const size_t comp_counts[] = { 10, 25, 50, 100 };
 
+    // Сценарии: группы компонентов, один компонент, пропатченные компоненты.
+    // Звёздочка у Patched: в entt нет встроенного обхода пропатченных
+    // компонентов, вместо него замеряется reactive storage (см. сноску под таблицей).
+    struct Scenario
+    {
+        const char* name;
+        picobench::benchmark_proc entt;
+        picobench::benchmark_proc zecs;
+    };
+    const Scenario scenarios[] = {
+        { "View", bench_run<TestWorldEntt, &TestWorld::run_views>, bench_run<TestWorldZecs, &TestWorld::run_views> },
+        { "Comps", bench_run<TestWorldEntt, &TestWorld::run_comps>, bench_run<TestWorldZecs, &TestWorld::run_comps> },
+        { "Patched*", bench_run<TestWorldEntt, &TestWorld::run_patched>, bench_run<TestWorldZecs, &TestWorld::run_patched> },
+    };
+
     print_table_header();
 
     for (size_t entities_count : entity_counts)
     {
         for (size_t max_comps : comp_counts)
         {
-            char title[64];
-            std::snprintf(title, sizeof(title), "View_%zuK, max %zu comps", entities_count / 1000, max_comps);
-
-            // Мир заполняется один раз на сьюит и переиспользуется всеми
-            // сэмплами: fill всё равно вне таймера, а run_views мутирует
+            // Мир заполняется один раз на конфигурацию и переиспользуется всеми
+            // сценариями и сэмплами: fill всё равно вне таймера, а run_*() мутируют
             // только значения, не структуру. Миры должны жить до конца
             // run_benchmarks(): на них ссылается user_data бенчмарков.
             TestWorldEntt entt_world;
@@ -76,29 +89,38 @@ int main()
             entt_world.fill(entities_count, max_comps);
             zecs_world.fill(entities_count, max_comps);
 
-            // Свежий локальный runner на каждый сьюит: прогоняем конфигурацию
-            // и сразу печатаем её строку, не дожидаясь остальных.
-            picobench::runner runner(/*local=*/true);
-            runner.set_default_state_iterations({ 20 });
-            runner.set_default_samples(5);
-            // Сверка контрольных сумм entt vs zecs: при расхождении — ошибка.
-            runner.set_compare_results_across_benchmarks(true);
-            runner.set_suite(title);
-            runner.add_benchmark("entt", bench_views<TestWorldEntt>)
-                .baseline()
-                .user_data(reinterpret_cast<uintptr_t>(&entt_world));
-            runner.add_benchmark("zecs", bench_views<TestWorldZecs>)
-                .user_data(reinterpret_cast<uintptr_t>(&zecs_world));
+            for (const Scenario& scenario : scenarios)
+            {
+                char title[64];
+                std::snprintf(title, sizeof(title), "%s_%zuK, max %zu comps", scenario.name, entities_count / 1000, max_comps);
 
-            runner.run_benchmarks();
-            const auto rpt = runner.generate_report();
-            if (!rpt.suites.empty())
-                print_table_row(rpt.suites.front());
+                // Свежий локальный runner на каждый сьюит: прогоняем сценарий
+                // и сразу печатаем его строку, не дожидаясь остальных.
+                picobench::runner runner(/*local=*/true);
+                runner.set_default_state_iterations({ 20 });
+                runner.set_default_samples(5);
+                // Сверка контрольных сумм entt vs zecs: при расхождении — ошибка.
+                runner.set_compare_results_across_benchmarks(true);
+                runner.set_suite(title);
+                runner.add_benchmark("entt", scenario.entt)
+                    .baseline()
+                    .user_data(reinterpret_cast<uintptr_t>(&entt_world));
+                runner.add_benchmark("zecs", scenario.zecs)
+                    .user_data(reinterpret_cast<uintptr_t>(&zecs_world));
 
-            if (runner.error() != picobench::no_error)
-                return runner.error();
+                runner.run_benchmarks();
+                const auto rpt = runner.generate_report();
+                if (!rpt.suites.empty())
+                    print_table_row(rpt.suites.front());
+
+                if (runner.error() != picobench::no_error)
+                    return runner.error();
+            }
         }
     }
+
+    std::printf("\n* entt has no patched view: its reactive storage is measured instead.\n");
+    std::printf("  zecs keeps the patch list inside the pool; entt fills a separate storage from a signal.\n");
 
     return 0;
 }

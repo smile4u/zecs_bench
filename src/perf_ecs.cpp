@@ -53,6 +53,12 @@ void TestWorld::fill(size_t entities_count, size_t coms_count)
     }
 }
 
+TestWorldEntt::TestWorldEntt()
+{
+    patched.bind(reg);
+    patched.on_update<TestComp<8>>();
+}
+
 TestEntityIndex TestWorldEntt::entity_add()
 {
     auto entity = reg.create();
@@ -208,13 +214,68 @@ void TestWorldZecs::run_views()
     }
 }
 
+void TestWorldEntt::run_comps()
+{
+    for (entt::entity e : reg.view<TestComp<2>>())
+        reg.get<TestComp<2>>(e).value += 21;
+
+    for (entt::entity e : reg.view<TestComp<6>>())
+        reg.get<TestComp<6>>(e).value += 22;
+
+    for (entt::entity e : reg.view<TestComp<9>>())
+        reg.get<TestComp<9>>(e).value += 23;
+}
+
+void TestWorldZecs::run_comps()
+{
+    for (zecs::Entity e : world.view_comps<TestComp<2>>())
+        world.comp_get<TestComp<2>>(e)->value += 21;
+
+    for (zecs::Entity e : world.view_comps<TestComp<6>>())
+        world.comp_get<TestComp<6>>(e)->value += 22;
+
+    for (zecs::Entity e : world.view_comps<TestComp<9>>())
+        world.comp_get<TestComp<9>>(e)->value += 23;
+}
+
+void TestWorldEntt::run_patched()
+{
+    for (size_t i = 0; i < entities.size(); i += 4)
+    {
+        if (reg.all_of<TestComp<8>>(entities[i]))
+            reg.patch<TestComp<8>>(entities[i]);
+    }
+
+    for (entt::entity e : patched)
+        reg.get<TestComp<8>>(e).value += 31;
+
+    patched.clear();
+}
+
+void TestWorldZecs::run_patched()
+{
+    // Всё, что пропатчено после этого тика, попадёт в view ниже.
+    const zecs::TickContext ctx(world.tick_get());
+
+    // comp_patch сам ничего не делает, если компонента у энтити нет.
+    for (size_t i = 0; i < entities.size(); i += 4)
+        world.comp_patch<TestComp<8>>(entities[i]);
+
+    for (zecs::Entity e : world.view_patched_comps<TestComp<8>>(ctx))
+        world.comp_get<TestComp<8>>(e)->value += 31;
+}
+
 uint64_t TestWorldEntt::mutation_sum()
 {
     return comp_value_sum<TestComp<1>>(reg)
         + comp_value_sum<TestComp<7>>(reg)
         + comp_value_sum<TestComp<22>>(reg)
         + comp_value_sum<TestComp<3>>(reg)
-        + comp_value_sum<TestComp<4>>(reg);
+        + comp_value_sum<TestComp<4>>(reg)
+        + comp_value_sum<TestComp<2>>(reg)
+        + comp_value_sum<TestComp<6>>(reg)
+        + comp_value_sum<TestComp<9>>(reg)
+        + comp_value_sum<TestComp<8>>(reg);
 }
 
 uint64_t TestWorldZecs::mutation_sum()
@@ -223,5 +284,9 @@ uint64_t TestWorldZecs::mutation_sum()
         + comp_value_sum<TestComp<7>>(world)
         + comp_value_sum<TestComp<22>>(world)
         + comp_value_sum<TestComp<3>>(world)
-        + comp_value_sum<TestComp<4>>(world);
+        + comp_value_sum<TestComp<4>>(world)
+        + comp_value_sum<TestComp<2>>(world)
+        + comp_value_sum<TestComp<6>>(world)
+        + comp_value_sum<TestComp<9>>(world)
+        + comp_value_sum<TestComp<8>>(world);
 }
