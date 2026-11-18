@@ -108,7 +108,7 @@ int main()
             for (const Scenario& scenario : scenarios)
             {
                 // The size stands first, so the rows of one size start the same way.
-                const std::string title = std::format("[{}K Entities, max {} comps] {}", entity_count / 1000, comp_count, scenario.name);
+                const std::string title = std::format("entities {}K, comps {} less, {}", entity_count / 1000, comp_count, scenario.name);
 
                 if (picobench::error_t err = run_suite(title, scenario, entt_world, zecs_world,
                         double(middle - start) / MB, double(end - middle) / MB))

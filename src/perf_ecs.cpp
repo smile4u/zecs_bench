@@ -90,7 +90,7 @@ void TestWorldZecs::entity_rem(TestEntityIndex index)
 void TestWorldEntt::entity_fill(TestEntityIndex index, size_t coms_count)
 {
     assert(coms_count <= TEST_COMPS_MAX);
-    dispatch::entt_fill_table[coms_count](reg, entities[index]);
+    dispatch::table[coms_count].entt_fill(reg, entities[index]);
 }
 
 TestCompBase* TestWorldEntt::comp_get(TestEntityIndex index, size_t comp_index)
@@ -99,19 +99,19 @@ TestCompBase* TestWorldEntt::comp_get(TestEntityIndex index, size_t comp_index)
     if (entity == entt::null)
         return nullptr;
     assert(comp_index <= TEST_COMPS_MAX);
-    return dispatch::entt_get_table[comp_index](reg, entity);
+    return dispatch::table[comp_index].entt_get(reg, entity);
 }
 
 void TestWorldEntt::comp_add(TestEntityIndex index, size_t comp_index)
 {
     assert(comp_index >= 1 && comp_index <= TEST_COMPS_MAX);
-    dispatch::entt_add_table[comp_index](reg, entities[index]);
+    dispatch::table[comp_index].entt_add(reg, entities[index]);
 }
 
 void TestWorldZecs::entity_fill(TestEntityIndex index, size_t coms_count)
 {
     assert(coms_count <= TEST_COMPS_MAX);
-    dispatch::zecs_fill_table[coms_count](world, entities[index]);
+    dispatch::table[coms_count].zecs_fill(world, entities[index]);
 }
 
 TestCompBase* TestWorldZecs::comp_get(TestEntityIndex index, size_t comp_index)
@@ -120,13 +120,13 @@ TestCompBase* TestWorldZecs::comp_get(TestEntityIndex index, size_t comp_index)
     if (entity == zecs::Entity_INVALID)
         return nullptr;
     assert(comp_index <= TEST_COMPS_MAX);
-    return dispatch::zecs_get_table[comp_index](world, entity);
+    return dispatch::table[comp_index].zecs_get(world, entity);
 }
 
 void TestWorldZecs::comp_add(TestEntityIndex index, size_t comp_index)
 {
     assert(comp_index >= 1 && comp_index <= TEST_COMPS_MAX);
-    dispatch::zecs_add_table[comp_index](world, entities[index]);
+    dispatch::table[comp_index].zecs_add(world, entities[index]);
 }
 
 void TestWorldEntt::run_views()
