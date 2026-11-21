@@ -35,9 +35,9 @@ struct WorldSize
     size_t comp_count;
 };
 
-// Removal leaves a world empty, so it can not use the worlds of the other
-// scenarios. Every sample makes and fills its own world outside the timer.
-// The timer covers only the removal.
+// After the removal a world is empty, so this benchmark can not use the
+// worlds of the other scenarios. Every sample makes and fills its own world.
+// Only the removal is timed.
 template<typename WorldT>
 void bench_remove(picobench::state& s)
 {
@@ -155,8 +155,8 @@ int main()
                 }
             }
 
-            // Remove runs when the shared worlds are gone: it makes its own
-            // worlds, and three big worlds at once take too much memory.
+            // Remove runs after the shared worlds are destroyed. It makes its
+            // own worlds, and three big worlds at once take too much memory.
             // One operation is the removal of all entities of a world.
             const WorldSize size{ entity_count, comp_count };
             const Scenario remove{ "Remove", bench_remove<TestWorldEntt>, bench_remove<TestWorldZecs> };
