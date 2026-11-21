@@ -304,6 +304,22 @@ void TestWorldZecs::run_patched()
         world.comp_get<TestComp<8>>(e)->value += 31;
 }
 
+void TestWorldEntt::run_remove()
+{
+    for (entt::entity e : entities)
+        reg.destroy(e);
+
+    entities.clear();
+}
+
+void TestWorldZecs::run_remove()
+{
+    for (zecs::Entity e : entities)
+        world.entity_remove(e);
+
+    entities.clear();
+}
+
 uint64_t TestWorldEntt::mutation_sum()
 {
     return comp_value_sum<TestComp<1>>(reg)

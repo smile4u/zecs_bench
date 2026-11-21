@@ -51,6 +51,9 @@ struct TestWorld
     // которое наполняется из сигнала on_update и очищается вручную. В zecs список
     // пропатченных живёт внутри пула (view_patched_comps<T>).
     virtual void run_patched() = 0;
+    // Removes all entities one by one: entt destroy() against zecs entity_remove().
+    // The world is empty after it, so this scenario gets its own world (see main.cpp).
+    virtual void run_remove() = 0;
     // Сумма value по компонентам, мутируемым в run_*() — контрольная
     // сумма для сверки того, что оба мира делают одинаковую работу.
     virtual uint64_t mutation_sum() = 0;
@@ -71,6 +74,7 @@ struct TestWorldEntt : public TestWorld
     void run_each() override;
     void run_comps() override;
     void run_patched() override;
+    void run_remove() override;
     uint64_t mutation_sum() override;
 
     entt::registry reg;
@@ -90,6 +94,7 @@ struct TestWorldZecs : public TestWorld
     void run_each() override;
     void run_comps() override;
     void run_patched() override;
+    void run_remove() override;
     uint64_t mutation_sum() override;
 
     zecs::World world;
