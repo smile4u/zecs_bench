@@ -40,6 +40,9 @@ struct TestWorld
     // Добавляет энтити один компонент TestComp<comp_index>, если его ещё нет.
     virtual void comp_add(TestEntityIndex index, size_t comp_index) = 0;
     virtual void run_views() = 0;
+    // The same groups as in run_views(), but the library calls the body
+    // and gives it the components: entt view.each() against zecs query_for_each().
+    virtual void run_each() = 0;
     // Обход одного компонента: entt view<T> против zecs view_comps<T>.
     virtual void run_comps() = 0;
     // Патчит компонент у каждой четвёртой энтити и обходит только пропатченные.
@@ -65,6 +68,7 @@ struct TestWorldEntt : public TestWorld
     TestCompBase* comp_get(TestEntityIndex index, size_t comp_index) override;
     void comp_add(TestEntityIndex index, size_t comp_index) override;
     void run_views() override;
+    void run_each() override;
     void run_comps() override;
     void run_patched() override;
     uint64_t mutation_sum() override;
@@ -83,6 +87,7 @@ struct TestWorldZecs : public TestWorld
     TestCompBase* comp_get(TestEntityIndex index, size_t comp_index) override;
     void comp_add(TestEntityIndex index, size_t comp_index) override;
     void run_views() override;
+    void run_each() override;
     void run_comps() override;
     void run_patched() override;
     uint64_t mutation_sum() override;

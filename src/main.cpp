@@ -78,6 +78,7 @@ int main()
 
     const Scenario scenarios[] = {
         { "View", bench_run<TestWorldEntt, &TestWorld::run_views>, bench_run<TestWorldZecs, &TestWorld::run_views> },
+        { "ForEach", bench_run<TestWorldEntt, &TestWorld::run_each>, bench_run<TestWorldZecs, &TestWorld::run_each> },
         { "Comps", bench_run<TestWorldEntt, &TestWorld::run_comps>, bench_run<TestWorldZecs, &TestWorld::run_comps> },
         { "Patched", bench_run<TestWorldEntt, &TestWorld::run_patched>, bench_run<TestWorldZecs, &TestWorld::run_patched> },
     };

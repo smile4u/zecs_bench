@@ -24,6 +24,27 @@ uint64_t comp_value_sum(zecs::World& world)
     return sum;
 }
 
+// The body of run_each(). It reads the second component, so the body
+// uses more than one of the components it is given.
+template<typename First, typename Second, typename... Rest>
+inline void each_body(int add, First& first, const Second& second, const Rest&...)
+{
+    first.value += add + second.value;
+}
+
+template<typename... Comp>
+void each_run(entt::registry& reg, int add)
+{
+    reg.view<Comp...>().each([add](Comp&... comps) { each_body(add, comps...); });
+}
+
+template<typename... Comp>
+void each_run(zecs::World& world, int add)
+{
+    const auto scope = world.query_scope<Comp...>();
+    world.query_for_each(scope, [add](zecs::Entity, Comp&... comps) { each_body(add, comps...); });
+}
+
 // Наборы компонентов, матчующие пять view из run_views(); 0 — терминатор.
 constexpr size_t VIEW_MATCH_COMPS[][9] = {
     { 1, 5, 0 },
@@ -212,6 +233,24 @@ void TestWorldZecs::run_views()
             //world.comp_patch<TestComp<4>>(e);
         }
     }
+}
+
+void TestWorldEntt::run_each()
+{
+    each_run<TestComp<1>, TestComp<5>>(reg, 41);
+    each_run<TestComp<7>, TestComp<11>, TestComp<12>>(reg, 42);
+    each_run<TestComp<22>, TestComp<33>, TestComp<44>, TestComp<45>>(reg, 43);
+    each_run<TestComp<3>, TestComp<17>, TestComp<23>, TestComp<33>, TestComp<43>>(reg, 44);
+    each_run<TestComp<4>, TestComp<15>, TestComp<24>, TestComp<25>, TestComp<34>, TestComp<35>, TestComp<44>, TestComp<45>>(reg, 45);
+}
+
+void TestWorldZecs::run_each()
+{
+    each_run<TestComp<1>, TestComp<5>>(world, 41);
+    each_run<TestComp<7>, TestComp<11>, TestComp<12>>(world, 42);
+    each_run<TestComp<22>, TestComp<33>, TestComp<44>, TestComp<45>>(world, 43);
+    each_run<TestComp<3>, TestComp<17>, TestComp<23>, TestComp<33>, TestComp<43>>(world, 44);
+    each_run<TestComp<4>, TestComp<15>, TestComp<24>, TestComp<25>, TestComp<34>, TestComp<35>, TestComp<44>, TestComp<45>>(world, 45);
 }
 
 void TestWorldEntt::run_comps()
