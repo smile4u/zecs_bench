@@ -62,20 +62,31 @@ inline constexpr size_t READ_BIG = 2;
 
 static_assert(std::ranges::all_of(QUERY_INFOS, [](const QueryInfo& query) { return query.read == READ_SMALL || query.read == READ_BIG; }));
 
+// The entries of query_table(). Every pack expansion here has only one pack:
+// MSVC can't expand Q and Args in one expansion inside a lambda.
+template<typename Result, typename WrapperT, typename Run, typename... Args>
+struct QueryTable
+{
+    template<size_t Q>
+    static Result call(WrapperT& wrapper, Args... args)
+    {
+        return Run{}(wrapper, args..., std::tuple_element_t<Q, Queries>{});
+    }
+
+    template<size_t... Q>
+    static constexpr std::array<Result (*)(WrapperT&, Args...), QUERY_COUNT> make(std::index_sequence<Q...>)
+    {
+        return { &call<Q>... };
+    }
+};
+
 // A table of functions for a query that is known only at run time.
 // Entry [q] returns Run{}(wrapper, args..., query q). Run is a lambda
 // without captures. A scenario gives its own data in `args`.
 template<typename Result, typename WrapperT, typename... Args, typename Run>
 constexpr auto query_table(Run)
 {
-    return []<size_t... Q>(std::index_sequence<Q...>)
-    {
-        return std::array<Result (*)(WrapperT&, Args...), QUERY_COUNT>{
-            [](WrapperT& wrapper, Args... args) -> Result
-            {
-                return Run{}(wrapper, args..., std::tuple_element_t<Q, Queries>{});
-            }... };
-    }(std::make_index_sequence<QUERY_COUNT>{});
+    return QueryTable<Result, WrapperT, Run, Args...>::make(std::make_index_sequence<QUERY_COUNT>{});
 }
 
 // The number of entities in the view of query q.
