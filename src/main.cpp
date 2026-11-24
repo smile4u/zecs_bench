@@ -1,16 +1,35 @@
+#include <fstream>
 #include <iostream>
+#include <string_view>
 
 #include "bench/console.h"
 #include "bench/report.h"
 #include "scenario.h"
 
-int main()
+int main(int argc, char* argv[])
 {
+    // The only argument is "--csv <file>". With it the results also go to a CSV file.
+    std::ofstream csv;
+    if (argc == 3 && std::string_view(argv[1]) == "--csv")
+    {
+        csv.open(argv[2]);
+        if (!csv)
+        {
+            std::cerr << "Error: can't open " << argv[2] << "\n";
+            return 1;
+        }
+    }
+    else if (argc != 1)
+    {
+        std::cerr << "Usage: zecs_bench [--csv <file>]\n";
+        return 1;
+    }
+
 #ifndef NDEBUG
     std::cout << "WARNING: NDEBUG isn't defined, so asserts are on. Build Release or RelWithDebInfo to get correct numbers.\n";
 #endif
 
-    Report report(std::cout, console_has_colors());
+    Report report(std::cout, csv.is_open() ? &csv : nullptr, console_has_colors());
     report.legend();
 
     ScenarioCreate create;

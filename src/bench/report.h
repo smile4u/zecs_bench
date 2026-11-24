@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <iosfwd>
+#include <string>
 
 #include "bench/grid.h"
 
@@ -33,9 +34,11 @@ struct Row
 // Every row is written at once, so the output shows the progress.
 struct Report
 {
+    // `csv` gets the same rows as CSV, with the environment in comment lines
+    // at the top. It can be nullptr.
     // With `colors` a row is green when zecs is faster and red when entt is
     // faster (see Report::row()). Use it only for a terminal, see console.h.
-    Report(std::ostream& out, bool colors);
+    Report(std::ostream& out, std::ostream* csv, bool colors);
 
     // The text before all tables.
     void legend();
@@ -47,7 +50,10 @@ struct Report
 
 private:
     std::ostream& out;
+    std::ostream* const csv;
     const bool colors;
+    // The name of the current table. Every CSV line has it.
+    std::string table;
     bool with_view = false;
     bool with_matched = false;
     bool with_memory = false;

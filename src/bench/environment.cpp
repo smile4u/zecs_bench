@@ -71,6 +71,11 @@ std::string cpu_name()
 }
 } // namespace
 
+std::string platform_text()
+{
+    return std::format("{}, {}", ZECS_BENCH_SYSTEM, cpu_name());
+}
+
 std::string environment_text()
 {
     return std::format("zecs {}, entt {}, picobench {} with picobench.patch\n"

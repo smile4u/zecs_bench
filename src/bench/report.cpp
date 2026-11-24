@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <format>
 #include <ostream>
+#include <sstream>
+#include <string>
 
 #include "bench/environment.h"
 #include "bench/runner.h"
@@ -10,22 +12,40 @@
 namespace
 {
 // A difference smaller than this is too small to show it with a color.
+// tools/plot.py has the same value.
 constexpr double COLOR_MIN_DIFFERENCE = 0.1;
 
 const char* const GREEN = "\x1b[32m";
 const char* const RED = "\x1b[31m";
 const char* const RESET = "\x1b[0m";
+
+// A number for a CSV line, or an empty field when the table has no such column.
+std::string csv_field(bool has, uint64_t value)
+{
+    return has ? std::to_string(value) : std::string();
+}
 } // namespace
 
-Report::Report(std::ostream& out, bool colors)
+Report::Report(std::ostream& out, std::ostream* csv, bool colors)
     : out(out)
+    , csv(csv)
     , colors(colors)
 {
 }
 
 void Report::legend()
 {
-    out << environment_text() << "\n"
+    const std::string environment = environment_text();
+    if (csv)
+    {
+        std::istringstream lines(environment);
+        for (std::string line; std::getline(lines, line);)
+            *csv << "# " << line << "\n";
+        *csv << "table,entities,comps,view,matched,entt_ns,entt_error,zecs_ns,zecs_error,entt_bytes,zecs_bytes\n" << std::flush;
+    }
+
+    out << "# zecs vs entt on " << platform_text() << "\n\n"
+        << environment << "\n"
         << "comps: entity i gets TestComp<1>..TestComp<i % comps>. Every fifth entity also gets\n"
         << "the components of the view of one query. TestComp<N> with odd N is small (" << sizeof(TestCompSmall) << " bytes),\n"
         << "and with even N it is big (" << sizeof(TestCompBig) << " bytes, with std::string).\n"
@@ -35,7 +55,7 @@ void Report::legend()
         << "view: the number of components in the view. matched: the number of entities in the view.\n"
         << "ns/op: the median of " << SAMPLES << " samples.\n"
         << "err%: half of the samples are within this distance from the median.\n"
-        << "zecs/entt: the time of zecs as a part of the time of entt.\n";
+        << "zecs vs entt: how much more (+) or less (-) time zecs takes than entt.\n";
 
     if (colors)
     {
@@ -52,17 +72,18 @@ void Report::table_begin(const char* name, const char* about, bool with_view, bo
     this->with_view = with_view;
     this->with_matched = with_matched;
     this->with_memory = with_memory;
+    table = name;
 
     out << std::format("\n## {}\n\n{}\n\n", name, about)
         << "| entities | comps |"
         << (with_view ? " view |" : "")
         << (with_matched ? " matched |" : "")
-        << "     entt ns/op |  err% |     zecs ns/op |  err% | zecs/entt |"
+        << "     entt ns/op |  err% |     zecs ns/op |  err% | zecs vs entt |"
         << (with_memory ? " entt MB | zecs MB |" : "")
         << "\n|---------:|------:|"
         << (with_view ? "-----:|" : "")
         << (with_matched ? "--------:|" : "")
-        << "---------------:|------:|---------------:|------:|----------:|"
+        << "---------------:|------:|---------------:|------:|-------------:|"
         << (with_memory ? "--------:|--------:|" : "")
         << "\n" << std::flush;
 }
@@ -88,8 +109,8 @@ void Report::row(const Row& row)
     if (with_matched)
         out << std::format(" {:>7} |", row.matched);
 
-    out << std::format(" {:>14.0f} | {:>4.1f}% | {:>14.0f} | {:>4.1f}% | {:>8.1f}% |",
-        row.entt.ns, row.entt.error * 100.0, row.zecs.ns, row.zecs.error * 100.0, ratio * 100.0);
+    out << std::format(" {:>14.0f} | {:>4.1f}% | {:>14.0f} | {:>4.1f}% | {:>+11.1f}% |",
+        row.entt.ns, row.entt.error * 100.0, row.zecs.ns, row.zecs.error * 100.0, (ratio - 1.0) * 100.0);
 
     constexpr double MB = 1024.0 * 1024.0;
     if (with_memory)
@@ -99,4 +120,15 @@ void Report::row(const Row& row)
         out << RESET;
 
     out << "\n" << std::flush;
+
+    if (csv)
+    {
+        const WorldBytes bytes = with_memory ? *row.bytes : WorldBytes{};
+        *csv << std::format("{},{},{},{},{},{:.1f},{:.4f},{:.1f},{:.4f},{},{}\n",
+            table, row.size.entity_count, row.size.comp_count,
+            csv_field(with_view, row.view), csv_field(with_matched, row.matched),
+            row.entt.ns, row.entt.error, row.zecs.ns, row.zecs.error,
+            csv_field(with_memory, bytes.entt), csv_field(with_memory, bytes.zecs))
+             << std::flush;
+    }
 }

@@ -62,8 +62,13 @@ execute_process(
 if(NOT ZECS_BENCH_ZECS_VERSION)
     set(ZECS_BENCH_ZECS_VERSION "unknown")
 endif()
+# CMake calls macOS "Darwin". The report uses the name that people know.
+set(ZECS_BENCH_SYSTEM_NAME "${CMAKE_SYSTEM_NAME}")
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    set(ZECS_BENCH_SYSTEM_NAME "macOS")
+endif()
 set_source_files_properties("${SRC_DIR}/bench/environment.cpp" PROPERTIES COMPILE_DEFINITIONS
-    "ZECS_BENCH_ZECS_VERSION=\"${ZECS_BENCH_ZECS_VERSION}\";ZECS_BENCH_BUILD_TYPE=\"$<CONFIG>\";ZECS_BENCH_SYSTEM=\"${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_PROCESSOR}\"")
+    "ZECS_BENCH_ZECS_VERSION=\"${ZECS_BENCH_ZECS_VERSION}\";ZECS_BENCH_BUILD_TYPE=\"$<CONFIG>\";ZECS_BENCH_SYSTEM=\"${ZECS_BENCH_SYSTEM_NAME} ${CMAKE_SYSTEM_PROCESSOR}\"")
 
 # world_entt.cpp and world_zecs.cpp have templates for every TestComp<N>.
 # Without /bigobj their object files can have more sections than
