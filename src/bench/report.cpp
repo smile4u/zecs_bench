@@ -13,7 +13,9 @@ Report::Report(std::ostream& out)
 void Report::legend()
 {
     out << "comps: entity i gets TestComp<1>..TestComp<i % comps>. Every fifth entity also gets\n"
-        << "the components of one view. ns/op: the median of " << SAMPLES << " samples.\n"
+        << "the components of one view. TestComp<N> with odd N is small (" << sizeof(TestCompSmall) << " bytes),\n"
+        << "and with even N it is big (" << sizeof(TestCompBig) << " bytes, with std::string).\n"
+        << "ns/op: the median of " << SAMPLES << " samples.\n"
         << "err%: half of the samples are within this distance from the median.\n"
         << "zecs/entt: the time of zecs as a part of the time of entt.\n"
         << std::flush;

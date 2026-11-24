@@ -1,10 +1,13 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <format>
 #include <string>
+
+#include "wrapper/test_comps.h"
 
 // The size of a world. fill() gives entity i the components
 // TestComp<1>..TestComp<i % comp_count>.
@@ -16,10 +19,14 @@ struct WorldSize
 
 // Every scenario runs on worlds of all these sizes, in this order.
 inline constexpr WorldSize WORLD_SIZES[] = {
-    { 10000, 10 }, { 10000, 25 }, { 10000, 50 }, { 10000, 100 },
-    { 50000, 10 }, { 50000, 25 }, { 50000, 50 }, { 50000, 100 },
-    { 200000, 10 }, { 200000, 25 }, { 200000, 50 }, { 200000, 100 },
+    { 10000, 10 }, { 10000, 25 }, { 10000, 50 }, { 10000, 64 },
+    { 50000, 10 }, { 50000, 25 }, { 50000, 50 }, { 50000, 64 },
+    { 200000, 10 }, { 200000, 25 }, { 200000, 50 }, { 200000, 64 },
 };
+
+// fill() takes components from TestComp<1> to TestComp<comp_count - 1>.
+// The assert in entity_fill() is off in Release, so the sizes are checked here.
+static_assert(std::ranges::all_of(WORLD_SIZES, [](const WorldSize& size) { return size.comp_count - 1 <= TEST_COMPS_MAX; }));
 
 // The memory of the two worlds of one size. It is what operator new gave
 // while a world was made and filled (see memory.h).
