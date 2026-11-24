@@ -1,11 +1,5 @@
 #include "scenario.h"
 
-// entt has no built-in pass over patched components, so it uses a reactive
-// storage. It is a separate storage that the on_update signal fills, and
-// the code clears it by hand. In zecs the list of patched components is
-// inside the pool (view_patched_comps<T>). So the two libraries don't do
-// exactly the same work.
-
 void ScenarioPatched::prepare(TestWorldEntt& wrapper)
 {
     entt_patched.emplace();
@@ -13,7 +7,7 @@ void ScenarioPatched::prepare(TestWorldEntt& wrapper)
     entt_patched->on_update<TestComp<8>>();
 }
 
-void ScenarioPatched::run(TestWorldEntt& wrapper)
+void ScenarioPatched::run(TestWorldEntt& wrapper, size_t)
 {
     entt::registry& reg = wrapper.reg;
 
@@ -29,7 +23,7 @@ void ScenarioPatched::run(TestWorldEntt& wrapper)
     entt_patched->clear();
 }
 
-void ScenarioPatched::run(TestWorldZecs& wrapper)
+void ScenarioPatched::run(TestWorldZecs& wrapper, size_t)
 {
     zecs::World& world = wrapper.world;
 

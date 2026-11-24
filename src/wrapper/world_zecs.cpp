@@ -63,13 +63,5 @@ void TestWorldZecs::comp_add(zecs::Entity entity, size_t comp_index)
 
 uint64_t TestWorldZecs::mutation_sum()
 {
-    return comp_value_sum<TestComp<1>>(world)
-        + comp_value_sum<TestComp<7>>(world)
-        + comp_value_sum<TestComp<22>>(world)
-        + comp_value_sum<TestComp<3>>(world)
-        + comp_value_sum<TestComp<4>>(world)
-        + comp_value_sum<TestComp<2>>(world)
-        + comp_value_sum<TestComp<6>>(world)
-        + comp_value_sum<TestComp<9>>(world)
-        + comp_value_sum<TestComp<8>>(world);
+    return comp_value_sum<TestComp<1>>(world) + comp_value_sum<TestComp<2>>(world) + comp_value_sum<TestComp<8>>(world);
 }

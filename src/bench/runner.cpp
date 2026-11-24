@@ -5,8 +5,7 @@
 
 #include "bench/report.h"
 
-bool measure_row(Report& report, const char* name, const WorldSize& size, int iterations,
-    Bench entt, Bench zecs, const WorldBytes* bytes)
+bool measure_row(const char* name, int iterations, Bench entt, Bench zecs, Row& row)
 {
     picobench::runner runner(/*local=*/true);
     runner.set_default_state_iterations({ iterations });
@@ -24,7 +23,8 @@ bool measure_row(Report& report, const char* name, const WorldSize& size, int it
         const auto& data = suite.find_benchmark(library)->data.front();
         return RowTime{ double(data.median_time_ns) / iterations, data.median_error };
     };
-    report.row(size, time("entt"), time("zecs"), bytes);
+    row.entt = time("entt");
+    row.zecs = time("zecs");
 
     return runner.error() == picobench::no_error;
 }

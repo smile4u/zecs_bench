@@ -8,19 +8,21 @@
 #include "bench/report.h"
 #include "bench/runner.h"
 #include "wrapper/fill.h"
+#include "wrapper/queries.h"
 
 namespace
 {
 // The number of runs of run() in one sample.
 constexpr int ITERATIONS = 20;
 
-// picobench takes only free functions, so the scenario and the world
-// come to bench_run() through user_data.
+// picobench takes only free functions, so the scenario, the world and
+// the query come to bench_run() through user_data.
 template<typename WrapperT>
 struct Job
 {
     WorldScenario& scenario;
     WrapperT& wrapper;
+    size_t query;
 };
 
 template<typename WrapperT>
@@ -32,7 +34,7 @@ void bench_run(picobench::state& s)
     // by the same amount. picobench compares the two results.
     const uint64_t before = job.wrapper.mutation_sum();
     for (picobench::iterate _ : s)
-        job.scenario.run(job.wrapper);
+        job.scenario.run(job.wrapper, job.query);
 
     s.set_result(job.wrapper.mutation_sum() - before);
 }
@@ -42,7 +44,7 @@ void bench_run(picobench::state& s)
 // are made, so only one pair of worlds is alive at a time.
 bool WorldScenario::measure(Report& report, SizeBytes& bytes)
 {
-    report.table_begin(name, false);
+    report.table_begin(name, about, with_queries, false);
 
     for (size_t s = 0; s < std::size(WORLD_SIZES); ++s)
     {
@@ -66,13 +68,29 @@ bool WorldScenario::measure(Report& report, SizeBytes& bytes)
         prepare(entt_wrapper);
         prepare(zecs_wrapper);
 
-        const Job<TestWorldEntt> entt_job{ *this, entt_wrapper };
-        const Job<TestWorldZecs> zecs_job{ *this, zecs_wrapper };
-        if (!measure_row(report, name, size, ITERATIONS,
-                { bench_run<TestWorldEntt>, &entt_job }, { bench_run<TestWorldZecs>, &zecs_job }))
-            return false;
+        for (size_t q = 0; q < (with_queries ? QUERY_COUNT : 1); ++q)
+        {
+            Row row{ size };
+            if (with_queries)
+            {
+                row.query = &QUERY_INFOS[q];
+                row.matched = match_count(entt_wrapper, q);
+                if (row.matched != match_count(zecs_wrapper, q))
+                {
+                    std::cerr << std::format("Error: {}, {}: entt and zecs visit a different number of entities for {} {}\n",
+                        name, size_text(size), row.query->kind, row.query->comps.size());
+                    return false;
+                }
+            }
+
+            const Job<TestWorldEntt> entt_job{ *this, entt_wrapper, q };
+            const Job<TestWorldZecs> zecs_job{ *this, zecs_wrapper, q };
+            if (!measure_row(name, ITERATIONS, { bench_run<TestWorldEntt>, &entt_job }, { bench_run<TestWorldZecs>, &zecs_job }, row))
+                return false;
+
+            report.row(row);
+        }
     }
 
-    report.table_end(note);
     return true;
 }

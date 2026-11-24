@@ -34,14 +34,16 @@ void bench_remove(picobench::state& s)
 
 bool ScenarioRemove::measure(Report& report, SizeBytes&)
 {
-    report.table_begin(name, false);
+    report.table_begin(name, about, false, false);
 
     for (const WorldSize& size : WORLD_SIZES)
     {
-        if (!measure_row(report, name, size, 1, { bench_remove<TestWorldEntt>, &size }, { bench_remove<TestWorldZecs>, &size }))
+        Row row{ size };
+        if (!measure_row(name, 1, { bench_remove<TestWorldEntt>, &size }, { bench_remove<TestWorldZecs>, &size }, row))
             return false;
+
+        report.row(row);
     }
 
-    report.table_end("Remove: entities are removed one by one. entt calls destroy(), and zecs calls entity_remove().");
     return true;
 }

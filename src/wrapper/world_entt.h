@@ -19,8 +19,9 @@ struct TestWorldEntt
     // Adds TestComp<comp_index> to the entity if the entity doesn't have it yet.
     void comp_add(entt::entity entity, size_t comp_index);
     // The sum of value over the components that the scenarios change.
-    // entt and zecs must give the same sum. It shows that both worlds
-    // do the same work.
+    // They are the first components of the queries (see queries.h) and
+    // TestComp<8> of ScenarioPatched. entt and zecs must give the same sum.
+    // It shows that both worlds do the same work.
     uint64_t mutation_sum();
 
     entt::registry reg;
