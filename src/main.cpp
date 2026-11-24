@@ -14,13 +14,16 @@ int main()
 
     ScenarioCreate create;
     ScenarioRemove remove;
-    ScenarioView view;
+    ScenarioViewGet view_get;
+    ScenarioViewWorldGet view_world_get;
     ScenarioForEach for_each;
+    ScenarioGet get;
+    ScenarioAddRemove add_remove;
     ScenarioPatched patched;
 
     // The scenarios run in this order. Create goes first: it measures
     // the memory that the other scenarios check.
-    Scenario* const scenarios[] = { &create, &remove, &view, &for_each, &patched };
+    Scenario* const scenarios[] = { &create, &remove, &view_get, &view_world_get, &for_each, &get, &add_remove, &patched };
 
     SizeBytes bytes;
     for (Scenario* scenario : scenarios)

@@ -69,5 +69,5 @@ void TestWorldEntt::comp_add(entt::entity entity, size_t comp_index)
 
 uint64_t TestWorldEntt::mutation_sum()
 {
-    return comp_value_sum<TestComp<1>>(reg) + comp_value_sum<TestComp<2>>(reg) + comp_value_sum<TestComp<8>>(reg);
+    return comp_value_sum<TestComp<1>>(reg) + comp_value_sum<TestComp<2>>(reg);
 }

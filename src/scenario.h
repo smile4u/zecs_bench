@@ -2,8 +2,11 @@
 
 #include <cstddef>
 #include <optional>
+#include <span>
+#include <vector>
 
 #include "bench/grid.h"
+#include "wrapper/queries.h"
 #include "wrapper/world_entt.h"
 #include "wrapper/world_zecs.h"
 
@@ -25,16 +28,15 @@ struct Scenario
     const char* const about;
 };
 
-// A scenario that runs on a filled world. It can change the values of
-// components, but it doesn't add or remove components.
-// measure() makes new worlds for every size and times run() on them.
+// A scenario that runs on a filled world. It can change components,
+// but after a run the entities have the same components as before.
+// measure() makes new worlds for every size. On every world it times
+// run() for every query of `queries`, one row for a query.
 struct WorldScenario : Scenario
 {
-    // With `with_queries` the table has a row for every query of queries.h
-    // on every world, and run() gets the index of the query. Without it
-    // the table has one row for a world, and the index is 0.
-    WorldScenario(const char* name, const char* about, bool with_queries)
-        : Scenario(name, about), with_queries(with_queries) {}
+    // `queries` are indices in QUERY_INFOS.
+    WorldScenario(const char* name, const char* about, std::span<const size_t> queries)
+        : Scenario(name, about), queries(queries) {}
 
     bool measure(Report& report, SizeBytes& bytes) override;
 
@@ -45,7 +47,7 @@ struct WorldScenario : Scenario
     virtual void run(TestWorldEntt& wrapper, size_t query) = 0;
     virtual void run(TestWorldZecs& wrapper, size_t query) = 0;
 
-    const bool with_queries;
+    const std::span<const size_t> queries;
 };
 
 // ------------------------------------------
@@ -76,13 +78,29 @@ struct ScenarioRemove : Scenario
     bool measure(Report& report, SizeBytes& bytes) override;
 };
 
-struct ScenarioView : WorldScenario
+struct ScenarioViewGet : WorldScenario
 {
-    ScenarioView()
-        : WorldScenario("View",
-            "A view for every query. The loop body takes every component of the query from the world,\n"
-            "reads all of them and changes the first one. entt uses registry.get(), and zecs uses world.comp_get().",
-            true)
+    ScenarioViewGet()
+        : WorldScenario("ViewGet",
+            "A view for every query. The loop body takes every component of the query from the view,\n"
+            "reads all of them and changes the first one. entt uses view.get(). zecs views have no such\n"
+            "function yet, so zecs takes the components from the world with world.comp_get(), as in ViewWorldGet.",
+            ALL_QUERIES)
+    {
+    }
+
+    void run(TestWorldEntt& wrapper, size_t query) override;
+    void run(TestWorldZecs& wrapper, size_t query) override;
+};
+
+struct ScenarioViewWorldGet : WorldScenario
+{
+    ScenarioViewWorldGet()
+        : WorldScenario("ViewWorldGet",
+            "The same views and the same loop body as in ViewGet, but both libraries take the components\n"
+            "from the world. entt uses registry.get(), and zecs uses world.comp_get(). Both find the pool\n"
+            "of the component type on every call.",
+            ALL_QUERIES)
     {
     }
 
@@ -94,9 +112,9 @@ struct ScenarioForEach : WorldScenario
 {
     ScenarioForEach()
         : WorldScenario("ForEach",
-            "The same queries and the same loop body as in View, but the library calls the body and gives it\n"
+            "The same queries and the same loop body as in ViewGet, but the library calls the body and gives it\n"
             "the components. entt uses view.each(), and zecs uses query_for_each().",
-            true)
+            ALL_QUERIES)
     {
     }
 
@@ -104,15 +122,60 @@ struct ScenarioForEach : WorldScenario
     void run(TestWorldZecs& wrapper, size_t query) override;
 };
 
+struct ScenarioGet : WorldScenario
+{
+    ScenarioGet()
+        : WorldScenario("Get",
+            "Takes the component of the query from every entity in a random order and changes it.\n"
+            "Some entities don't have it. entt uses registry.try_get(), and zecs uses world.comp_get().\n"
+            "Both find the pool of the component type and then the component of the entity.",
+            ONE_COMP_QUERIES)
+    {
+    }
+
+    void prepare(TestWorldEntt& wrapper) override;
+    void prepare(TestWorldZecs& wrapper) override;
+    void run(TestWorldEntt& wrapper, size_t query) override;
+    void run(TestWorldZecs& wrapper, size_t query) override;
+
+private:
+    // All entities of the world in a random order. The order is the same for entt and zecs.
+    std::vector<entt::entity> entt_order;
+    std::vector<zecs::Entity> zecs_order;
+};
+
+struct ScenarioAddRemove : WorldScenario
+{
+    ScenarioAddRemove()
+        : WorldScenario("AddRemove",
+            "Removes the component of the query from every fourth entity that has it, then adds it to them again.\n"
+            "After a run the entities have the same components, but the order of the components in the pool changes.\n"
+            "entt uses remove() and emplace(), and zecs uses comp_remove() and comp_add().",
+            ONE_COMP_QUERIES)
+    {
+    }
+
+    void prepare(TestWorldEntt& wrapper) override;
+    void prepare(TestWorldZecs& wrapper) override;
+    void run(TestWorldEntt& wrapper, size_t query) override;
+    void run(TestWorldZecs& wrapper, size_t query) override;
+
+private:
+    // The entities that a run has removed the component from.
+    // prepare() reserves the memory, so the run doesn't allocate it.
+    std::vector<entt::entity> entt_removed;
+    std::vector<zecs::Entity> zecs_removed;
+};
+
 struct ScenarioPatched : WorldScenario
 {
     ScenarioPatched()
         : WorldScenario("Patched",
-            "Patches TestComp<8> (a big component) of every fourth entity, then visits only the patched components.\n"
+            "Patches the component of the query on every fourth entity, then visits only the patched components.\n"
             "entt has no view of patched components, so it uses a reactive storage. It is a separate storage\n"
             "that the on_update signal fills, and the code clears it by hand. zecs keeps the list of patched\n"
             "components inside the pool. So the two libraries don't do exactly the same work.",
-            false)
+            ONE_COMP_QUERIES)
     {
     }
 
@@ -122,7 +185,7 @@ struct ScenarioPatched : WorldScenario
     void run(TestWorldZecs& wrapper, size_t query) override;
 
 private:
-    // Keeps the entities whose TestComp<8> was patched. prepare() makes it
+    // Keeps the entities whose component was patched. prepare() makes it
     // again for every new world. Its destructor doesn't use the registry,
     // so it can be destroyed after the registry of the old world.
     std::optional<entt::reactive_mixin<entt::storage<void>>> entt_patched;

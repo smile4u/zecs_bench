@@ -44,7 +44,7 @@ void bench_run(picobench::state& s)
 // are made, so only one pair of worlds is alive at a time.
 bool WorldScenario::measure(Report& report, SizeBytes& bytes)
 {
-    report.table_begin(name, about, with_queries, false);
+    report.table_begin(name, about, true, false);
 
     for (size_t s = 0; s < std::size(WORLD_SIZES); ++s)
     {
@@ -68,19 +68,16 @@ bool WorldScenario::measure(Report& report, SizeBytes& bytes)
         prepare(entt_wrapper);
         prepare(zecs_wrapper);
 
-        for (size_t q = 0; q < (with_queries ? QUERY_COUNT : 1); ++q)
+        for (size_t q : queries)
         {
             Row row{ size };
-            if (with_queries)
+            row.query = &QUERY_INFOS[q];
+            row.matched = match_count(entt_wrapper, q);
+            if (row.matched != match_count(zecs_wrapper, q))
             {
-                row.query = &QUERY_INFOS[q];
-                row.matched = match_count(entt_wrapper, q);
-                if (row.matched != match_count(zecs_wrapper, q))
-                {
-                    std::cerr << std::format("Error: {}, {}: entt and zecs visit a different number of entities for {} {}\n",
-                        name, size_text(size), row.query->kind, row.query->comps.size());
-                    return false;
-                }
+                std::cerr << std::format("Error: {}, {}: entt and zecs have a different number of entities for {} {}\n",
+                    name, size_text(size), row.query->kind, row.query->comps.size());
+                return false;
             }
 
             const Job<TestWorldEntt> entt_job{ *this, entt_wrapper, q };

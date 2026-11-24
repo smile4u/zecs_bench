@@ -4,26 +4,36 @@
 
 namespace
 {
-// The loop body of View and ForEach. It reads every component of the query
-// and changes the first one. So a wide query costs more than a narrow one,
-// and View and ForEach do the same work.
+// The loop body of ViewGet, ViewWorldGet and ForEach. It reads every component
+// of the query and changes the first one. So a wide query costs more than
+// a narrow one, and the three scenarios do the same work.
 template<typename First, typename... Rest>
 inline void body(First& first, const Rest&... rest)
 {
     first.value += 1 + (0 + ... + rest.value);
 }
 
+// ViewGet. The view already has its pools, so view.get() doesn't look for them.
 template<size_t First, size_t... Rest>
-void view_run(TestWorldEntt& wrapper, Query<First, Rest...>)
+void view_get_run(TestWorldEntt& wrapper, Query<First, Rest...>)
+{
+    auto view = wrapper.reg.view<TestComp<First>, TestComp<Rest>...>();
+    for (entt::entity e : view)
+        body(view.template get<TestComp<First>>(e), view.template get<TestComp<Rest>>(e)...);
+}
+
+// ViewWorldGet. registry.get() finds the pool on every call.
+template<size_t First, size_t... Rest>
+void view_world_get_run(TestWorldEntt& wrapper, Query<First, Rest...>)
 {
     entt::registry& reg = wrapper.reg;
     for (entt::entity e : reg.view<TestComp<First>, TestComp<Rest>...>())
         body(reg.get<TestComp<First>>(e), reg.get<TestComp<Rest>>(e)...);
 }
 
-// The components are taken from the world, as in entt above.
+// ViewGet and ViewWorldGet both run this code for zecs.
 // zecs views have no comp_get, so world.comp_get<T>(e) finds the pool on every call.
-// TODO(zecs): add view.comp_get<T>(e). Then the loop doesn't need to find the pool.
+// TODO(zecs): add view.comp_get<T>(e). Then ViewGet doesn't need to find the pool.
 template<size_t First, size_t... Rest>
 void view_run(TestWorldZecs& wrapper, Query<First, Rest...>)
 {
@@ -56,13 +66,25 @@ void each_run(TestWorldZecs& wrapper, Query<N...>)
 }
 } // namespace
 
-void ScenarioView::run(TestWorldEntt& wrapper, size_t query)
+void ScenarioViewGet::run(TestWorldEntt& wrapper, size_t query)
 {
-    static constexpr auto TABLE = query_table<void, TestWorldEntt>([](TestWorldEntt& w, auto q) { view_run(w, q); });
+    static constexpr auto TABLE = query_table<void, TestWorldEntt>([](TestWorldEntt& w, auto q) { view_get_run(w, q); });
     TABLE[query](wrapper);
 }
 
-void ScenarioView::run(TestWorldZecs& wrapper, size_t query)
+void ScenarioViewGet::run(TestWorldZecs& wrapper, size_t query)
+{
+    static constexpr auto TABLE = query_table<void, TestWorldZecs>([](TestWorldZecs& w, auto q) { view_run(w, q); });
+    TABLE[query](wrapper);
+}
+
+void ScenarioViewWorldGet::run(TestWorldEntt& wrapper, size_t query)
+{
+    static constexpr auto TABLE = query_table<void, TestWorldEntt>([](TestWorldEntt& w, auto q) { view_world_get_run(w, q); });
+    TABLE[query](wrapper);
+}
+
+void ScenarioViewWorldGet::run(TestWorldZecs& wrapper, size_t query)
 {
     static constexpr auto TABLE = query_table<void, TestWorldZecs>([](TestWorldZecs& w, auto q) { view_run(w, q); });
     TABLE[query](wrapper);

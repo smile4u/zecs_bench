@@ -22,7 +22,7 @@ struct Row
     WorldSize size;
     // The query of the row. It is nullptr in a table without the query columns.
     const QueryInfo* query = nullptr;
-    // The number of entities that the query visits.
+    // The number of entities that have all components of the query.
     size_t matched = 0;
     RowTime entt = {};
     RowTime zecs = {};
