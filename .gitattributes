@@ -1,0 +1,3 @@
+# update.py writes picobench.hpp with LF line endings. The patch must have
+# LF too, or git apply fails on Windows with core.autocrlf.
+ext/picobench/picobench.patch text eol=lf

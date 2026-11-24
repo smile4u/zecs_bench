@@ -1,0 +1,55 @@
+diff --git a/ext/picobench/picobench.hpp b/ext/picobench/picobench.hpp
+index 8f31774..fbd6e29 100644
+--- a/ext/picobench/picobench.hpp
++++ b/ext/picobench/picobench.hpp
+@@ -451,6 +451,8 @@ public:
+         int samples; // number of samples taken
+         int64_t total_time_ns; // fastest sample!!!
+         result_t result; // result of fastest sample
++        int64_t median_time_ns; // median sample (zecs_bench patch)
++        double median_error; // MdAPE of the samples, as in nanobench (zecs_bench patch)
+     };
+     struct benchmark
+     {
+@@ -1055,7 +1057,7 @@ public:
+                 rpt_benchmark->data.reserve(state_inputs.size());
+                 for (auto in : state_inputs)
+                 {
+-                    rpt_benchmark->data.push_back({in.iterations, 0, 0ll, result_t(0)});
++                    rpt_benchmark->data.push_back({in.iterations, 0, 0ll, result_t(0), 0ll, 0.0});
+                 }
+ 
+                 for (auto& state : b->_states)
+@@ -1085,6 +1087,32 @@ public:
+                     }
+                 }
+ 
++                // zecs_bench patch: the median sample and the median absolute percent
++                // error (MdAPE) of the samples. MdAPE is the median of |t - median| / t.
++                // 0.05 means that half of the samples are within 5% of the median.
++                // For an even number of samples the median is the upper middle sample.
++                auto median = [](auto values)
++                {
++                    auto middle = values.begin() + long(values.size() / 2);
++                    std::nth_element(values.begin(), middle, values.end());
++                    return *middle;
++                };
++                for (auto& d : rpt_benchmark->data)
++                {
++                    std::vector<int64_t> times;
++                    for (auto& state : b->_states)
++                    {
++                        if (state.iterations() == d.dimension)
++                            times.push_back(state.duration_ns());
++                    }
++                    d.median_time_ns = median(times);
++
++                    std::vector<double> errors;
++                    for (auto t : times)
++                        errors.push_back(double(std::abs(t - d.median_time_ns)) / double(t));
++                    d.median_error = median(errors);
++                }
++
+ #if defined(PICOBENCH_DEBUG)
+                 for (auto& d : rpt_benchmark->data)
+                 {
