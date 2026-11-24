@@ -1,5 +1,6 @@
 #include <iostream>
 
+#include "bench/console.h"
 #include "bench/report.h"
 #include "scenario.h"
 
@@ -9,7 +10,7 @@ int main()
     std::cout << "WARNING: NDEBUG isn't defined, so asserts are on. Build Release or RelWithDebInfo to get correct numbers.\n";
 #endif
 
-    Report report(std::cout);
+    Report report(std::cout, console_has_colors());
     report.legend();
 
     ScenarioCreate create;

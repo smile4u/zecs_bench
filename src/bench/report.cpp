@@ -1,12 +1,24 @@
 #include "bench/report.h"
 
+#include <algorithm>
 #include <format>
 #include <ostream>
 
 #include "bench/runner.h"
 
-Report::Report(std::ostream& out)
+namespace
+{
+// A difference smaller than this is too small to show it with a color.
+constexpr double COLOR_MIN_DIFFERENCE = 0.1;
+
+const char* const GREEN = "\x1b[32m";
+const char* const RED = "\x1b[31m";
+const char* const RESET = "\x1b[0m";
+} // namespace
+
+Report::Report(std::ostream& out, bool colors)
     : out(out)
+    , colors(colors)
 {
 }
 
@@ -21,6 +33,12 @@ void Report::legend()
         << "err%: half of the samples are within this distance from the median.\n"
         << "zecs/entt: the time of zecs as a part of the time of entt.\n";
 
+    if (colors)
+    {
+        out << std::format("{}Green{} row: zecs is faster. {}Red{} row: entt is faster. The difference is more than {:.0f}%\n",
+                GREEN, RESET, RED, RESET, COLOR_MIN_DIFFERENCE * 100.0)
+            << "and more than err% of entt and zecs together. Smaller differences can be noise.\n";
+    }
 
     out << std::flush;
 }
@@ -47,7 +65,17 @@ void Report::table_begin(const char* name, const char* about, bool with_view, bo
 
 void Report::row(const Row& row)
 {
+    // A difference within err% of both libraries can be noise, so it gets no color.
     const double ratio = row.zecs.ns / row.entt.ns;
+    const double difference = std::max(COLOR_MIN_DIFFERENCE, row.entt.error + row.zecs.error);
+    const char* color = nullptr;
+    if (colors && ratio < 1.0 - difference)
+        color = GREEN;
+    else if (colors && ratio > 1.0 + difference)
+        color = RED;
+
+    if (color)
+        out << color;
 
     out << std::format("| {:>7}K | {:>5} |", row.size.entity_count / 1000, row.size.comp_count);
 
@@ -62,6 +90,9 @@ void Report::row(const Row& row)
     constexpr double MB = 1024.0 * 1024.0;
     if (with_memory)
         out << std::format(" {:>7.1f} | {:>7.1f} |", double(row.bytes->entt) / MB, double(row.bytes->zecs) / MB);
+
+    if (color)
+        out << RESET;
 
     out << "\n" << std::flush;
 }

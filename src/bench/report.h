@@ -33,7 +33,9 @@ struct Row
 // Every row is written at once, so the output shows the progress.
 struct Report
 {
-    explicit Report(std::ostream& out);
+    // With `colors` a row is green when zecs is faster and red when entt is
+    // faster (see Report::row()). Use it only for a terminal, see console.h.
+    Report(std::ostream& out, bool colors);
 
     // The text before all tables.
     void legend();
@@ -45,6 +47,7 @@ struct Report
 
 private:
     std::ostream& out;
+    const bool colors;
     bool with_view = false;
     bool with_matched = false;
     bool with_memory = false;
