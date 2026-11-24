@@ -14,6 +14,8 @@ struct TestCompBase
 // A small component. A pool can copy it as bytes, and it has no destructor.
 struct TestCompSmall : TestCompBase
 {
+    // The work of a loop body with this component.
+    void change() { value += 1; }
 };
 
 // A big component. A pool must call its constructors and its destructor
@@ -21,7 +23,18 @@ struct TestCompSmall : TestCompBase
 struct TestCompBig : TestCompBase
 {
     std::string s;
-    std::array<size_t, 16> arr;
+    std::array<size_t, 16> arr{};
+
+    // The work of a loop body with this component. It changes all data
+    // of the component except the string, so it uses all cache lines of
+    // the component. A change of the string can allocate memory, and then
+    // the bench would measure the allocator.
+    void change()
+    {
+        value += 1;
+        for (size_t& x : arr)
+            x += 1;
+    }
 };
 
 // Odd N gives a small component, and even N gives a big one. Entity i gets

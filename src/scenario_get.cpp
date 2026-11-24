@@ -22,7 +22,7 @@ void get_run(TestWorldEntt& wrapper, const std::vector<entt::entity>& order, Que
     for (entt::entity e : order)
     {
         if (auto* comp = reg.try_get<TestComp<N>>(e))
-            comp->value += 1;
+            comp->change();
     }
 }
 
@@ -33,7 +33,7 @@ void get_run(TestWorldZecs& wrapper, const std::vector<zecs::Entity>& order, Que
     for (zecs::Entity e : order)
     {
         if (auto* comp = world.comp_get<TestComp<N>>(e))
-            comp->value += 1;
+            comp->change();
     }
 }
 } // namespace

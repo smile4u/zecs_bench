@@ -16,7 +16,7 @@ void view_get_run(TestWorldEntt& wrapper, Query<Read, View...>)
     {
         auto view = wrapper.reg.view<TestComp<View>...>();
         for (entt::entity e : view)
-            view.template get<TestComp<Read>>(e).value += 1;
+            view.template get<TestComp<Read>>(e).change();
     }
 }
 
@@ -31,12 +31,12 @@ void view_get_run(TestWorldZecs& wrapper, Query<Read, View...>)
     if constexpr (sizeof...(View) == 1)
     {
         for (zecs::Entity e : world.view_comps<TestComp<View>...>())
-            world.comp_get<TestComp<Read>>(e)->value += 1;
+            world.comp_get<TestComp<Read>>(e)->change();
     }
     else
     {
         for (zecs::Entity e : world.view_comp_group<TestComp<View>...>())
-            world.comp_get<TestComp<Read>>(e)->value += 1;
+            world.comp_get<TestComp<Read>>(e)->change();
     }
 }
 
@@ -49,7 +49,7 @@ void view_get_other_run(TestWorldEntt& wrapper, Query<Read, View...>)
     for (entt::entity e : reg.view<TestComp<View>...>())
     {
         if (auto* comp = reg.try_get<TestComp<Read>>(e))
-            comp->value += 1;
+            comp->change();
     }
 }
 
@@ -63,7 +63,7 @@ void view_get_other_run(TestWorldZecs& wrapper, Query<Read, View...>)
         for (zecs::Entity e : world.view_comps<TestComp<View>...>())
         {
             if (auto* comp = world.comp_get<TestComp<Read>>(e))
-                comp->value += 1;
+                comp->change();
         }
     }
     else
@@ -71,7 +71,7 @@ void view_get_other_run(TestWorldZecs& wrapper, Query<Read, View...>)
         for (zecs::Entity e : world.view_comp_group<TestComp<View>...>())
         {
             if (auto* comp = world.comp_get<TestComp<Read>>(e))
-                comp->value += 1;
+                comp->change();
         }
     }
 }
@@ -84,7 +84,7 @@ void each_run(TestWorldEntt& wrapper, Query<Read, View...>)
     if constexpr (((Read == View) || ...))
     {
         wrapper.reg.view<TestComp<View>...>().each(
-            [](TestComp<View>&... comps) { std::get<TestComp<Read>&>(std::tie(comps...)).value += 1; });
+            [](TestComp<View>&... comps) { std::get<TestComp<Read>&>(std::tie(comps...)).change(); });
     }
 }
 
@@ -95,7 +95,7 @@ void each_run(TestWorldZecs& wrapper, Query<Read, View...>)
     {
         zecs::World& world = wrapper.world;
         world.query_for_each(world.query_scope<TestComp<View>...>(),
-            [](zecs::Entity, TestComp<View>&... comps) { std::get<TestComp<Read>&>(std::tie(comps...)).value += 1; });
+            [](zecs::Entity, TestComp<View>&... comps) { std::get<TestComp<Read>&>(std::tie(comps...)).change(); });
     }
 }
 } // namespace

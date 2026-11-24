@@ -28,6 +28,8 @@ void Report::legend()
         << "the components of the view of one query. TestComp<N> with odd N is small (" << sizeof(TestCompSmall) << " bytes),\n"
         << "and with even N it is big (" << sizeof(TestCompBig) << " bytes, with std::string).\n"
         << "small or big in the name of a table: the kind of the component that the loop body reads and changes.\n"
+        << "The body adds 1 to value of a small component. In a big one it also adds 1 to all 16 numbers\n"
+        << "of its array, so it uses all cache lines of the component.\n"
         << "view: the number of components in the view. matched: the number of entities in the view.\n"
         << "ns/op: the median of " << SAMPLES << " samples.\n"
         << "err%: half of the samples are within this distance from the median.\n"

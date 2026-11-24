@@ -17,7 +17,7 @@ void patched_run(TestWorldEntt& wrapper, EnttPatched& patched, Query<N, Rest...>
     }
 
     for (entt::entity e : patched)
-        reg.get<TestComp<N>>(e).value += 1;
+        reg.get<TestComp<N>>(e).change();
 
     patched.clear();
 }
@@ -36,7 +36,7 @@ void patched_run(TestWorldZecs& wrapper, Query<N, Rest...>)
         world.comp_patch<TestComp<N>>(wrapper.entities[i]);
 
     for (zecs::Entity e : world.view_patched_comps<TestComp<N>>(ctx))
-        world.comp_get<TestComp<N>>(e)->value += 1;
+        world.comp_get<TestComp<N>>(e)->change();
 }
 } // namespace
 
