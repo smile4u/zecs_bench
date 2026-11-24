@@ -13,25 +13,27 @@ Report::Report(std::ostream& out)
 void Report::legend()
 {
     out << "comps: entity i gets TestComp<1>..TestComp<i % comps>. Every fifth entity also gets\n"
-        << "the components of one view. zecs/entt: the time of zecs as a part of the time of entt.\n"
-        << "Every row shows the fastest of " << SAMPLES << " samples.\n"
+        << "the components of one view. ns/op: the median of " << SAMPLES << " samples.\n"
+        << "err%: half of the samples are within this distance from the median.\n"
+        << "zecs/entt: the time of zecs as a part of the time of entt.\n"
         << std::flush;
 }
 
 void Report::table_begin(const char* name, bool with_memory)
 {
     out << std::format("\n## {}\n\n", name)
-        << "| entities | comps |     entt ns/op |     zecs ns/op | zecs/entt |"
+        << "| entities | comps |     entt ns/op |  err% |     zecs ns/op |  err% | zecs/entt |"
         << (with_memory ? " entt MB | zecs MB |" : "")
-        << "\n|---------:|------:|---------------:|---------------:|----------:|"
+        << "\n|---------:|------:|---------------:|------:|---------------:|------:|----------:|"
         << (with_memory ? "--------:|--------:|" : "")
         << "\n" << std::flush;
 }
 
-void Report::row(const WorldSize& size, double entt_ns, double zecs_ns, const WorldBytes* bytes)
+void Report::row(const WorldSize& size, const RowTime& entt, const RowTime& zecs, const WorldBytes* bytes)
 {
-    out << std::format("| {:>7}K | {:>5} | {:>14.0f} | {:>14.0f} | {:>8.1f}% |",
-        size.entity_count / 1000, size.comp_count, entt_ns, zecs_ns, zecs_ns / entt_ns * 100.0);
+    out << std::format("| {:>7}K | {:>5} | {:>14.0f} | {:>4.1f}% | {:>14.0f} | {:>4.1f}% | {:>8.1f}% |",
+        size.entity_count / 1000, size.comp_count,
+        entt.ns, entt.error * 100.0, zecs.ns, zecs.error * 100.0, zecs.ns / entt.ns * 100.0);
 
     constexpr double MB = 1024.0 * 1024.0;
     if (bytes)

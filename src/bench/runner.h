@@ -6,7 +6,8 @@
 
 struct Report;
 
-// Every row is measured SAMPLES times, and the fastest sample is reported.
+// Every row is measured SAMPLES times, and the median sample is reported.
+// It is odd, so the median is one of the samples.
 inline constexpr int SAMPLES = 5;
 
 // The benchmark of one library and the data that it gets as user_data.

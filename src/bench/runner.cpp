@@ -17,11 +17,14 @@ bool measure_row(Report& report, const char* name, const WorldSize& size, int it
     runner.add_benchmark("zecs", zecs.proc).user_data(reinterpret_cast<uintptr_t>(zecs.data));
     runner.run_benchmarks();
 
-    // One suite with one input. total_time_ns is the time of the best sample.
+    // One suite with one input. The median comes from picobench.patch.
     const auto suite = runner.generate_report().suites.front();
-    const double entt_ns = double(suite.find_benchmark("entt")->data.front().total_time_ns) / iterations;
-    const double zecs_ns = double(suite.find_benchmark("zecs")->data.front().total_time_ns) / iterations;
-    report.row(size, entt_ns, zecs_ns, bytes);
+    const auto time = [&](const char* library)
+    {
+        const auto& data = suite.find_benchmark(library)->data.front();
+        return RowTime{ double(data.median_time_ns) / iterations, data.median_error };
+    };
+    report.row(size, time("entt"), time("zecs"), bytes);
 
     return runner.error() == picobench::no_error;
 }
