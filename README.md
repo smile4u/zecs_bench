@@ -18,6 +18,18 @@ cmake --build build
 
 The report is markdown. It starts with the build and the machine, and it tells
 what every table measures. A run takes about one minute and needs up to 3 GB of memory.
+With `--csv <file>` the results also go to a CSV file.
+
+## Results
+
+![zecs vs entt on macOS](results/charts/macos.svg)
+
+The bars show how much more (+) or less (-) time zecs takes than entt.
+Left of 0 zecs is faster. All rows are in the CSV files in `results/`.
+
+A CSV file there is 5 runs merged with `tools/merge.py`: a time is the median
+of the runs, and the error bars show how much it changes from run to run.
+`python tools/plot.py results/*.csv` draws the charts again (it needs matplotlib).
 
 ## Third-party code
 
