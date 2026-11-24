@@ -14,7 +14,7 @@ std::vector<Entity> shuffled(std::vector<Entity> entities)
     return entities;
 }
 
-// The scenario takes only the queries with one component, so N is the component of the query.
+// The scenario takes only the queries with one component, so N is the component that the query reads.
 template<size_t N, size_t... Rest>
 void get_run(TestWorldEntt& wrapper, const std::vector<entt::entity>& order, Query<N, Rest...>)
 {

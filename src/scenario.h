@@ -2,7 +2,8 @@
 
 #include <cstddef>
 #include <optional>
-#include <span>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include "bench/grid.h"
@@ -16,7 +17,7 @@ struct Report;
 struct Scenario
 {
     // `about` tells what the scenario measures. It is written before the table.
-    Scenario(const char* name, const char* about) : name(name), about(about) {}
+    Scenario(std::string name, const char* about) : name(std::move(name)), about(about) {}
     virtual ~Scenario() = default;
 
     // Measures the scenario on the worlds of all sizes and writes its table.
@@ -24,19 +25,30 @@ struct Scenario
     // and the other scenarios check their worlds with it.
     virtual bool measure(Report& report, SizeBytes& bytes) = 0;
 
-    const char* const name;
+    const std::string name;
     const char* const about;
+};
+
+// The views of the queries that a WorldScenario takes.
+enum class Views
+{
+    // The views have the component that the loop body reads.
+    with_read,
+    // The views don't have the component that the loop body reads.
+    without_read,
+    // Only the view of the one component that the loop body reads.
+    only_read,
 };
 
 // A scenario that runs on a filled world. It can change components,
 // but after a run the entities have the same components as before.
 // measure() makes new worlds for every size. On every world it times
-// run() for every query of `queries`, one row for a query.
+// run() for every query that the scenario takes, one row for a query.
 struct WorldScenario : Scenario
 {
-    // `queries` are indices in QUERY_INFOS.
-    WorldScenario(const char* name, const char* about, std::span<const size_t> queries)
-        : Scenario(name, about), queries(queries) {}
+    // `read` is READ_SMALL or READ_BIG. The scenario takes the queries that
+    // read this component and have `views`. The name gets the kind of `read`.
+    WorldScenario(const char* name, const char* about, size_t read, Views views);
 
     bool measure(Report& report, SizeBytes& bytes) override;
 
@@ -44,10 +56,12 @@ struct WorldScenario : Scenario
     // the data that it needs for this world.
     virtual void prepare(TestWorldEntt&) {}
     virtual void prepare(TestWorldZecs&) {}
+    // `query` is an index in QUERY_INFOS.
     virtual void run(TestWorldEntt& wrapper, size_t query) = 0;
     virtual void run(TestWorldZecs& wrapper, size_t query) = 0;
 
-    const std::span<const size_t> queries;
+    const size_t read;
+    const Views views;
 };
 
 // ------------------------------------------
@@ -80,12 +94,13 @@ struct ScenarioRemove : Scenario
 
 struct ScenarioViewGet : WorldScenario
 {
-    ScenarioViewGet()
+    explicit ScenarioViewGet(size_t read)
         : WorldScenario("ViewGet",
-            "A view for every query. The loop body takes every component of the query from the view,\n"
-            "reads all of them and changes the first one. entt uses view.get(). zecs views have no such\n"
-            "function yet, so zecs takes the components from the world with world.comp_get(), as in ViewWorldGet.",
-            ALL_QUERIES)
+            "A view, and the loop body takes a component of this view and changes it. A view of one component\n"
+            "reads it in order. A wider view reads it by the index from the sparse array, because this component\n"
+            "isn't in the lead pool. entt uses view.get(). zecs views have no such function yet, so zecs takes\n"
+            "the component from the world with world.comp_get(), as in ViewGetOther.",
+            read, Views::with_read)
     {
     }
 
@@ -93,14 +108,14 @@ struct ScenarioViewGet : WorldScenario
     void run(TestWorldZecs& wrapper, size_t query) override;
 };
 
-struct ScenarioViewWorldGet : WorldScenario
+struct ScenarioViewGetOther : WorldScenario
 {
-    ScenarioViewWorldGet()
-        : WorldScenario("ViewWorldGet",
-            "The same views and the same loop body as in ViewGet, but both libraries take the components\n"
-            "from the world. entt uses registry.get(), and zecs uses world.comp_get(). Both find the pool\n"
-            "of the component type on every call.",
-            ALL_QUERIES)
+    explicit ScenarioViewGetOther(size_t read)
+        : WorldScenario("ViewGetOther",
+            "The same views as in ViewGet, but the loop body takes a component that isn't in the view\n"
+            "and changes it. Some entities of the view don't have it. entt uses registry.try_get(), and zecs\n"
+            "uses world.comp_get(). Both find the pool of the component type on every call.",
+            read, Views::without_read)
     {
     }
 
@@ -110,11 +125,11 @@ struct ScenarioViewWorldGet : WorldScenario
 
 struct ScenarioForEach : WorldScenario
 {
-    ScenarioForEach()
+    explicit ScenarioForEach(size_t read)
         : WorldScenario("ForEach",
-            "The same queries and the same loop body as in ViewGet, but the library calls the body and gives it\n"
-            "the components. entt uses view.each(), and zecs uses query_for_each().",
-            ALL_QUERIES)
+            "The same views as in ViewGet, but the library calls the loop body and gives it all components\n"
+            "of the view. The body changes one of them. entt uses view.each(), and zecs uses query_for_each().",
+            read, Views::with_read)
     {
     }
 
@@ -124,12 +139,12 @@ struct ScenarioForEach : WorldScenario
 
 struct ScenarioGet : WorldScenario
 {
-    ScenarioGet()
+    explicit ScenarioGet(size_t read)
         : WorldScenario("Get",
-            "Takes the component of the query from every entity in a random order and changes it.\n"
-            "Some entities don't have it. entt uses registry.try_get(), and zecs uses world.comp_get().\n"
-            "Both find the pool of the component type and then the component of the entity.",
-            ONE_COMP_QUERIES)
+            "Takes the component from every entity in a random order and changes it. Some entities\n"
+            "don't have it. entt uses registry.try_get(), and zecs uses world.comp_get(). Both find\n"
+            "the pool of the component type and then the component of the entity.",
+            read, Views::only_read)
     {
     }
 
@@ -146,12 +161,12 @@ private:
 
 struct ScenarioAddRemove : WorldScenario
 {
-    ScenarioAddRemove()
+    explicit ScenarioAddRemove(size_t read)
         : WorldScenario("AddRemove",
-            "Removes the component of the query from every fourth entity that has it, then adds it to them again.\n"
+            "Removes the component from every fourth entity that has it, then adds it to them again.\n"
             "After a run the entities have the same components, but the order of the components in the pool changes.\n"
             "entt uses remove() and emplace(), and zecs uses comp_remove() and comp_add().",
-            ONE_COMP_QUERIES)
+            read, Views::only_read)
     {
     }
 
@@ -169,13 +184,13 @@ private:
 
 struct ScenarioPatched : WorldScenario
 {
-    ScenarioPatched()
+    explicit ScenarioPatched(size_t read)
         : WorldScenario("Patched",
-            "Patches the component of the query on every fourth entity, then visits only the patched components.\n"
+            "Patches the component on every fourth entity, then visits only the patched components.\n"
             "entt has no view of patched components, so it uses a reactive storage. It is a separate storage\n"
             "that the on_update signal fills, and the code clears it by hand. zecs keeps the list of patched\n"
             "components inside the pool. So the two libraries don't do exactly the same work.",
-            ONE_COMP_QUERIES)
+            read, Views::only_read)
     {
     }
 

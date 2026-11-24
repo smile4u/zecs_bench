@@ -5,8 +5,6 @@
 
 #include "bench/grid.h"
 
-struct QueryInfo;
-
 // The time of one library in one row.
 struct RowTime
 {
@@ -17,16 +15,17 @@ struct RowTime
     double error;
 };
 
+// A row of a table. A table writes only the columns that it has (see Report::table_begin()).
 struct Row
 {
     WorldSize size;
-    // The query of the row. It is nullptr in a table without the query columns.
-    const QueryInfo* query = nullptr;
-    // The number of entities that have all components of the query.
+    // The number of components in the view of the query.
+    size_t view = 0;
+    // The number of entities in the view of the query.
     size_t matched = 0;
     RowTime entt = {};
     RowTime zecs = {};
-    // The memory of the worlds. It is nullptr in a table without the memory columns.
+    // The memory of the worlds.
     const WorldBytes* bytes = nullptr;
 };
 
@@ -40,9 +39,13 @@ struct Report
     void legend();
 
     // Writes the name of a scenario, the text about it and the header of its table.
-    void table_begin(const char* name, const char* about, bool with_query, bool with_memory);
+    // The columns of the table are kept for row() until the next table.
+    void table_begin(const char* name, const char* about, bool with_view, bool with_matched, bool with_memory);
     void row(const Row& row);
 
 private:
     std::ostream& out;
+    bool with_view = false;
+    bool with_matched = false;
+    bool with_memory = false;
 };

@@ -35,6 +35,12 @@ struct TestComp : std::conditional_t<N % 2 == 1, TestCompSmall, TestCompBig>
 static_assert(std::is_trivially_copyable_v<TestComp<1>> && std::is_trivially_destructible_v<TestComp<1>>);
 static_assert(!std::is_trivially_copyable_v<TestComp<2>> && !std::is_trivially_destructible_v<TestComp<2>>);
 
+// The kind of TestComp<n> for the report.
+constexpr const char* comp_kind(size_t n)
+{
+    return n % 2 == 1 ? "small" : "big";
+}
+
 // The largest N of TestComp<N>. The tables in world_entt.cpp and
 // world_zecs.cpp have an entry for every N from 0 to this value.
 inline constexpr size_t TEST_COMPS_MAX = 64;

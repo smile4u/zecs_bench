@@ -34,12 +34,12 @@ void bench_remove(picobench::state& s)
 
 bool ScenarioRemove::measure(Report& report, SizeBytes&)
 {
-    report.table_begin(name, about, false, false);
+    report.table_begin(name.c_str(), about, false, false, false);
 
     for (const WorldSize& size : WORLD_SIZES)
     {
         Row row{ size };
-        if (!measure_row(name, 1, { bench_remove<TestWorldEntt>, &size }, { bench_remove<TestWorldZecs>, &size }, row))
+        if (!measure_row(name.c_str(), 1, { bench_remove<TestWorldEntt>, &size }, { bench_remove<TestWorldZecs>, &size }, row))
             return false;
 
         report.row(row);

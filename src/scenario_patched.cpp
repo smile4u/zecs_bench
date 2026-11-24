@@ -4,7 +4,7 @@ namespace
 {
 using EnttPatched = entt::reactive_mixin<entt::storage<void>>;
 
-// The scenario takes only the queries with one component, so N is the component of the query.
+// The scenario takes only the queries with one component, so N is the component that the query reads.
 template<size_t N, size_t... Rest>
 void patched_run(TestWorldEntt& wrapper, EnttPatched& patched, Query<N, Rest...>)
 {

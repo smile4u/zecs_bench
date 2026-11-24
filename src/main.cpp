@@ -14,16 +14,24 @@ int main()
 
     ScenarioCreate create;
     ScenarioRemove remove;
-    ScenarioViewGet view_get;
-    ScenarioViewWorldGet view_world_get;
-    ScenarioForEach for_each;
-    ScenarioGet get;
-    ScenarioAddRemove add_remove;
-    ScenarioPatched patched;
+    ScenarioViewGet view_get_small(READ_SMALL), view_get_big(READ_BIG);
+    ScenarioViewGetOther view_get_other_small(READ_SMALL), view_get_other_big(READ_BIG);
+    ScenarioForEach for_each_small(READ_SMALL), for_each_big(READ_BIG);
+    ScenarioGet get_small(READ_SMALL), get_big(READ_BIG);
+    ScenarioAddRemove add_remove_small(READ_SMALL), add_remove_big(READ_BIG);
+    ScenarioPatched patched_small(READ_SMALL), patched_big(READ_BIG);
 
     // The scenarios run in this order. Create goes first: it measures
     // the memory that the other scenarios check.
-    Scenario* const scenarios[] = { &create, &remove, &view_get, &view_world_get, &for_each, &get, &add_remove, &patched };
+    Scenario* const scenarios[] = {
+        &create, &remove,
+        &view_get_small, &view_get_big,
+        &view_get_other_small, &view_get_other_big,
+        &for_each_small, &for_each_big,
+        &get_small, &get_big,
+        &add_remove_small, &add_remove_big,
+        &patched_small, &patched_big,
+    };
 
     SizeBytes bytes;
     for (Scenario* scenario : scenarios)

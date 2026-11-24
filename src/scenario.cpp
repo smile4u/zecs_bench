@@ -40,11 +40,19 @@ void bench_run(picobench::state& s)
 }
 } // namespace
 
+WorldScenario::WorldScenario(const char* name, const char* about, size_t read, Views views)
+    : Scenario(std::format("{} {}", name, comp_kind(read)), about)
+    , read(read)
+    , views(views)
+{
+}
+
 // The worlds of the previous size are destroyed before the new worlds
 // are made, so only one pair of worlds is alive at a time.
 bool WorldScenario::measure(Report& report, SizeBytes& bytes)
 {
-    report.table_begin(name, about, true, false);
+    // A table of one view of one component doesn't need the view column.
+    report.table_begin(name.c_str(), about, views != Views::only_read, true, false);
 
     for (size_t s = 0; s < std::size(WORLD_SIZES); ++s)
     {
@@ -68,21 +76,29 @@ bool WorldScenario::measure(Report& report, SizeBytes& bytes)
         prepare(entt_wrapper);
         prepare(zecs_wrapper);
 
-        for (size_t q : queries)
+        for (size_t q = 0; q < QUERY_COUNT; ++q)
         {
+            const QueryInfo& query = QUERY_INFOS[q];
+            const bool takes = query.read == read
+                && (views == Views::with_read ? query.reads_view()
+                    : views == Views::without_read ? !query.reads_view()
+                    : query.reads_view() && query.view.size() == 1);
+            if (!takes)
+                continue;
+
             Row row{ size };
-            row.query = &QUERY_INFOS[q];
+            row.view = query.view.size();
             row.matched = match_count(entt_wrapper, q);
             if (row.matched != match_count(zecs_wrapper, q))
             {
-                std::cerr << std::format("Error: {}, {}: entt and zecs have a different number of entities for {} {}\n",
-                    name, size_text(size), row.query->kind, row.query->comps.size());
+                std::cerr << std::format("Error: {}, {}: entt and zecs have a different number of entities in the view of query {}\n",
+                    name, size_text(size), q);
                 return false;
             }
 
             const Job<TestWorldEntt> entt_job{ *this, entt_wrapper, q };
             const Job<TestWorldZecs> zecs_job{ *this, zecs_wrapper, q };
-            if (!measure_row(name, ITERATIONS, { bench_run<TestWorldEntt>, &entt_job }, { bench_run<TestWorldZecs>, &zecs_job }, row))
+            if (!measure_row(name.c_str(), ITERATIONS, { bench_run<TestWorldEntt>, &entt_job }, { bench_run<TestWorldZecs>, &zecs_job }, row))
                 return false;
 
             report.row(row);

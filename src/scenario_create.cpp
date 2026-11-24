@@ -37,7 +37,7 @@ void bench_create(picobench::state& s)
 
 bool ScenarioCreate::measure(Report& report, SizeBytes& bytes)
 {
-    report.table_begin(name, about, false, true);
+    report.table_begin(name.c_str(), about, false, false, true);
 
     for (size_t s = 0; s < std::size(WORLD_SIZES); ++s)
     {
@@ -45,7 +45,7 @@ bool ScenarioCreate::measure(Report& report, SizeBytes& bytes)
         const Job zecs_job{ WORLD_SIZES[s], bytes[s].zecs };
         Row row{ WORLD_SIZES[s] };
         row.bytes = &bytes[s];
-        if (!measure_row(name, 1, { bench_create<TestWorldEntt>, &entt_job }, { bench_create<TestWorldZecs>, &zecs_job }, row))
+        if (!measure_row(name.c_str(), 1, { bench_create<TestWorldEntt>, &entt_job }, { bench_create<TestWorldZecs>, &zecs_job }, row))
             return false;
 
         report.row(row);

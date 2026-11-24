@@ -5,20 +5,20 @@
 
 namespace
 {
-template<size_t... N>
-size_t count(TestWorldEntt& wrapper, Query<N...>)
+template<size_t Read, size_t... View>
+size_t count(TestWorldEntt& wrapper, Query<Read, View...>)
 {
     size_t visited = 0;
-    for ([[maybe_unused]] entt::entity e : wrapper.reg.view<TestComp<N>...>())
+    for ([[maybe_unused]] entt::entity e : wrapper.reg.view<TestComp<View>...>())
         ++visited;
     return visited;
 }
 
-template<size_t... N>
-size_t count(TestWorldZecs& wrapper, Query<N...>)
+template<size_t Read, size_t... View>
+size_t count(TestWorldZecs& wrapper, Query<Read, View...>)
 {
     size_t visited = 0;
-    for ([[maybe_unused]] zecs::Entity e : wrapper.world.view_comp_group<TestComp<N>...>())
+    for ([[maybe_unused]] zecs::Entity e : wrapper.world.view_comp_group<TestComp<View>...>())
         ++visited;
     return visited;
 }

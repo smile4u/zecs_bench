@@ -2,7 +2,7 @@
 
 namespace
 {
-// The scenario takes only the queries with one component, so N is the component of the query.
+// The scenario takes only the queries with one component, so N is the component that the query reads.
 // A component that is added again has value N, as after fill(). So mutation_sum() doesn't change.
 template<size_t N, size_t... Rest>
 void add_remove_run(TestWorldEntt& wrapper, std::vector<entt::entity>& removed, Query<N, Rest...>)
