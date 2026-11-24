@@ -3,7 +3,7 @@
 #include <cstdint>
 
 // Bytes that are allocated with operator new and not freed yet.
-// utils.cpp replaces the global operator new and operator delete to count them.
+// memory.cpp replaces the global operator new and operator delete to count them.
 // Both entt and zecs take their memory there.
 //
 // Why not the memory of the process: the heap keeps the pages of the worlds

@@ -36,17 +36,20 @@ file(GLOB_RECURSE BENCH_SOURCES CONFIGURE_DEPENDS
     "${SRC_DIR}/*.cpp"
     "${SRC_DIR}/*.h")
 
-source_group("src" FILES ${BENCH_SOURCES})
+source_group(TREE "${SRC_DIR}" FILES ${BENCH_SOURCES})
 
 # entt and picobench are header-only, so they are interface libraries.
 add_subdirectory(ext)
 add_subdirectory(zecs)
 
 add_executable(${PROJECT_NAME} ${BENCH_SOURCES})
+# The includes start from src/, for example "bench/report.h".
+target_include_directories(${PROJECT_NAME} PRIVATE "${SRC_DIR}")
 target_link_libraries(${PROJECT_NAME} PRIVATE picobench entt zecs)
 
-# perf_ecs.cpp has many entt and zecs templates. Without /bigobj its object
-# file has more sections than the COFF format allows.
+# world_entt.cpp and world_zecs.cpp have templates for every TestComp<N>.
+# Without /bigobj their object files can have more sections than
+# the COFF format allows.
 if(MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /bigobj)
 endif()
