@@ -47,6 +47,24 @@ add_executable(${PROJECT_NAME} ${BENCH_SOURCES})
 target_include_directories(${PROJECT_NAME} PRIVATE "${SRC_DIR}")
 target_link_libraries(${PROJECT_NAME} PRIVATE picobench entt zecs)
 
+# The report starts with the version of zecs, the build type and the system.
+# The version is "git describe" of the submodule. It is taken when CMake
+# configures the build, so it can be old after a change in zecs without
+# a new configure. "-dirty" at the end means changes that aren't committed.
+# The values go only to environment.cpp, so a new version doesn't rebuild
+# the other files.
+execute_process(
+    COMMAND git describe --tags --always --dirty
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/zecs"
+    OUTPUT_VARIABLE ZECS_BENCH_ZECS_VERSION
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET)
+if(NOT ZECS_BENCH_ZECS_VERSION)
+    set(ZECS_BENCH_ZECS_VERSION "unknown")
+endif()
+set_source_files_properties("${SRC_DIR}/bench/environment.cpp" PROPERTIES COMPILE_DEFINITIONS
+    "ZECS_BENCH_ZECS_VERSION=\"${ZECS_BENCH_ZECS_VERSION}\";ZECS_BENCH_BUILD_TYPE=\"$<CONFIG>\";ZECS_BENCH_SYSTEM=\"${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_PROCESSOR}\"")
+
 # world_entt.cpp and world_zecs.cpp have templates for every TestComp<N>.
 # Without /bigobj their object files can have more sections than
 # the COFF format allows.

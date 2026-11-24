@@ -4,6 +4,7 @@
 #include <format>
 #include <ostream>
 
+#include "bench/environment.h"
 #include "bench/runner.h"
 
 namespace
@@ -24,7 +25,8 @@ Report::Report(std::ostream& out, bool colors)
 
 void Report::legend()
 {
-    out << "comps: entity i gets TestComp<1>..TestComp<i % comps>. Every fifth entity also gets\n"
+    out << environment_text() << "\n"
+        << "comps: entity i gets TestComp<1>..TestComp<i % comps>. Every fifth entity also gets\n"
         << "the components of the view of one query. TestComp<N> with odd N is small (" << sizeof(TestCompSmall) << " bytes),\n"
         << "and with even N it is big (" << sizeof(TestCompBig) << " bytes, with std::string).\n"
         << "small or big in the name of a table: the kind of the component that the loop body reads and changes.\n"
