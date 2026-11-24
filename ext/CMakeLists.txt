@@ -1,9 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
 
-add_library(nb INTERFACE)
-target_sources(nb INTERFACE nanobench/nanobench.h)
-target_include_directories(nb INTERFACE ${CMAKE_CURRENT_LIST_DIR})
-
 add_library(picobench INTERFACE)
 target_sources(picobench INTERFACE picobench/picobench.hpp)
 target_include_directories(picobench INTERFACE ${CMAKE_CURRENT_LIST_DIR})

@@ -45,7 +45,7 @@ void each_run(zecs::World& world, int add)
     world.query_for_each(scope, [add](zecs::Entity, Comp&... comps) { each_body(add, comps...); });
 }
 
-// Наборы компонентов, матчующие пять view из run_views(); 0 — терминатор.
+// The component sets of the five views in run_views(). 0 marks the end of a set.
 constexpr size_t VIEW_MATCH_COMPS[][9] = {
     { 1, 5, 0 },
     { 7, 11, 12, 0 },
@@ -62,9 +62,9 @@ void TestWorld::fill(size_t entities_count, size_t coms_count)
         TestEntityIndex index = entity_add();
         entity_fill(index, i % coms_count);
 
-        // Каждая пятая энтити дополнительно получает набор компонентов одного
-        // из view, иначе при coms_count < 45 большая часть view пуста и замер
-        // превращается в стоимость построения пустого view.
+        // Every fifth entity also gets the components of one view. Without them
+        // most views are empty when coms_count < 45. Then the bench measures
+        // only the cost of an empty view.
         if (i % 5 == 0)
         {
             const size_t* view_comps = VIEW_MATCH_COMPS[(i / 5) % 5];
@@ -179,16 +179,16 @@ void TestWorldEntt::run_views()
     for (entt::entity e : reg.view<TestComp<4>, TestComp<15>, TestComp<24>, TestComp<25>, TestComp<34>, TestComp<35>, TestComp<44>, TestComp<45>>())
     {
         reg.get<TestComp<4>>(e).value += 15;
-        reg.patch<TestComp<4>>(e);
+        //reg.patch<TestComp<4>>(e);
     }
 }
 
 void TestWorldZecs::run_views()
 {
-    // world.comp_get<T>(e) re-resolves the component pool from World
-    // (cuidIndex + comp_pools lookup) on every call; the view already holds
-    // the pool's lookup arrays, so view.comp_get<T>(e) skips that.
-    // Views are read-only; patching goes through world.comp_patch<T>(e).
+    // The component is taken from the world, as in entt above.
+    // zecs views have no comp_get, so world.comp_get<T>(e) finds the pool on every call.
+    // A view can't patch a component. Use world.comp_patch<T>(e) for it.
+    // TODO(zecs): add view.comp_get<T>(e). Then the loop doesn't need to find the pool.
     {
         auto view = world.view_comp_group<TestComp<1>, TestComp<5>>();
         for (zecs::Entity e : view)
@@ -293,10 +293,11 @@ void TestWorldEntt::run_patched()
 
 void TestWorldZecs::run_patched()
 {
-    // Всё, что пропатчено после этого тика, попадёт в view ниже.
+    // The view below gets every component that is patched after this tick.
     const zecs::TickContext ctx(world.tick_get());
 
-    // comp_patch сам ничего не делает, если компонента у энтити нет.
+    // comp_patch does nothing when the entity doesn't have the component.
+    // So the loop doesn't check it first, as entt does with all_of.
     for (size_t i = 0; i < entities.size(); i += 4)
         world.comp_patch<TestComp<8>>(entities[i]);
 

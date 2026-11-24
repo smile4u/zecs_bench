@@ -111,6 +111,10 @@ int main()
         { "Patched", bench_run<TestWorldEntt, &TestWorld::run_patched>, bench_run<TestWorldZecs, &TestWorld::run_patched> },
     };
 
+#ifndef NDEBUG
+    std::cout << "WARNING: NDEBUG isn't defined, so asserts are on. Build Release or RelWithDebInfo to get correct numbers.\n";
+#endif
+
     std::cout << "\n"
               << "| config                                 |     entt ns/op |     zecs ns/op | relative | entt MB | zecs MB\n"
               << "|----------------------------------------|----------------|----------------|----------|---------|--------\n"
