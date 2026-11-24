@@ -1,0 +1,33 @@
+name: CI
+
+on: [push, pull_request]
+
+# Only the build is checked. A run of the bench on a shared CI machine gives
+# noisy numbers, and the worlds of 200K entities need gigabytes of memory.
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: "Linux gcc 14",    os: ubuntu-24.04,   cxx: g++-14 }
+          - { name: "Linux clang 18",  os: ubuntu-24.04,   cxx: clang++-18 }
+          - { name: "macOS clang",     os: macos-latest,   cxx: clang++ }
+          - { name: "Windows MSVC",    os: windows-latest, cxx: "" }
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure
+        shell: bash
+        run: >
+          cmake -S . -B build
+          -DCMAKE_BUILD_TYPE=Release
+          ${{ matrix.cxx != '' && format('-DCMAKE_CXX_COMPILER={0}', matrix.cxx) || '' }}
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
