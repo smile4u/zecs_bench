@@ -40,3 +40,7 @@ of the runs, and the error bars show how much it changes from run to run.
 ## License
 
 MIT, see [LICENSE](LICENSE).
+
+## Thanks
+
+Thanks to [EnTT](https://github.com/skypjack/entt) and its author Michele Caini ([@skypjack](https://github.com/skypjack)) for the inspiration.
